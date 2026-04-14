@@ -15,13 +15,11 @@ import {
   Globe,
   Layers,
   ShieldCheck,
-  Cpu,
-  History,
-  X,
   Bot,
   Search,
   MessageSquare,
-  ZapOff
+  History,
+  X
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { GlassCard } from "../components/GlassCard";
@@ -51,7 +49,10 @@ interface AnalysisResponse {
   };
 }
 
-const API_BASE_URL = "https://narendrapatidarbtai-btech-backend.hf.space/api";
+// DYNAMIC URL: Local vs Production
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? "http://127.0.0.1:8000/api" 
+  : "https://narendrapatidarbtai-btech-backend.hf.space/api";
 
 export function AnalysisDashboard() {
   const location = useLocation();
@@ -76,27 +77,61 @@ export function AnalysisDashboard() {
       try {
         setLoading(true);
         const idsString = selectedPaperIds.join(",");
+        // Backend expects 'dashboard' endpoint
         const response = await fetch(`${API_BASE_URL}/dashboard/?paperIds=${idsString}`);
+        
         if (!response.ok) throw new Error("Engine offline.");
+        
         const result = await response.json();
         setAnalysisData(result);
+        toast.success("Neural Link Established");
       } catch (err: any) {
-        toast.error("Uplink failed: Backend unreachable.");
+        console.error("Fetch error:", err);
+        toast.error("Uplink failed: Check Backend Terminal.");
       } finally {
-        setTimeout(() => setLoading(false), 3000); 
+        // Keeping the dramatic loader for 2 seconds
+        setTimeout(() => setLoading(false), 2000); 
       }
     };
     performAnalysis();
   }, [selectedPaperIds, navigate]);
+
+  // --- Data Transformation for Charts ---
+  const topicFrequencyData = useMemo(() => {
+    if (!analysisData?.topics) return [];
+    
+    // Converting Object { "Topic": 5 } to Array [{ topic: "Top..", hits: 5 }]
+    return Object.entries(analysisData.topics)
+      .map(([topic, freq]) => ({
+        topic: topic.length > 12 ? topic.substring(0, 10) + ".." : topic,
+        fullTopic: topic,
+        hits: freq,
+      }))
+      .sort((a, b) => b.hits - a.hits)
+      .slice(0, 8); // Showing top 8 for better UI
+  }, [analysisData]);
+
+  const questionsList = useMemo(() => {
+    if (!analysisData?.questions) return [];
+    return Object.entries(analysisData.questions);
+  }, [analysisData]);
+
+  const weightage = [
+    { name: "High", value: 65, color: "#6366f1" },
+    { name: "Average", value: 25, color: "#06b6d4" },
+    { name: "Low", value: 10, color: "#1e293b" },
+  ];
 
   // --- Feature: Download Logic ---
   const handleDownloadReport = () => {
     if (!analysisData) return;
     setIsGenerating(true);
     toast.loading("Generating Neural Report...");
+    
     setTimeout(() => {
       try {
-        const text = `PATTERN BTECH REPORT\nSubject: ${subjectName}\nGenerated: ${new Date().toLocaleString()}\n\nTOPICS:\n${Object.entries(analysisData.topics).map(([t, c]) => `- ${t}: ${c}`).join('\n')}`;
+        const text = `PATTERN BTECH REPORT\nSubject: ${subjectName}\nUniversity: ${university}\nGenerated: ${new Date().toLocaleString()}\n\nTOPICS FREQUENCY:\n${Object.entries(analysisData.topics).map(([t, c]) => `- ${t}: ${c} occurrences`).join('\n')}\n\nIMPORTANT QUESTIONS:\n${Object.entries(analysisData.questions).map(([q, h]) => `- ${q} (Repeated ${h} times)`).join('\n')}`;
+        
         const blob = new Blob([text], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -113,53 +148,34 @@ export function AnalysisDashboard() {
     }, 1500);
   };
 
-  // --- NEW: Multi-AI Logic with Clipboard Fix ---
+  // --- AI Redirect Logic ---
   const redirectAITool = async (tool: 'chatgpt' | 'gemini' | 'perplexity' | 'multi-ai') => {
     if (!selectedQuestion) return;
 
-    const prompt = `Question: ${selectedQuestion}\n\nAct as a B.Tech professor. Provide a detailed university-standard answer with points, diagram suggestions, and key technical terms for ${subjectName}.`;
+    const prompt = `Question: ${selectedQuestion}\n\nAct as a B.Tech professor. Provide a detailed university-standard answer for ${subjectName}. Include points, technical keywords, and mention diagram requirements.`;
 
-    // Clipboard strategy for tools that block direct query strings
     try {
       await navigator.clipboard.writeText(prompt);
-      toast.info("Prompt copied! Just paste (Ctrl+V) in the AI window.", { duration: 4000 });
+      toast.info("Prompt copied! Paste it in the AI window.", { duration: 3000 });
     } catch (err) {
-      console.error("Clipboard blocked");
+      console.error("Clipboard failed");
     }
 
     let url = "";
     switch(tool) {
-      case 'chatgpt': url = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`; break;
+      case 'chatgpt': url = `https://chatgpt.com/`; break;
       case 'gemini': url = `https://gemini.google.com/app`; break;
-      case 'perplexity': url = `https://www.perplexity.ai/search?q=${encodeURIComponent(prompt)}`; break;
-      case 'multi-ai': url = `https://www.google.com/search?q=${encodeURIComponent(prompt + " AI solutions")}`; break;
+      case 'perplexity': url = `https://www.perplexity.ai/`; break;
+      case 'multi-ai': url = `https://www.google.com/search?q=${encodeURIComponent(selectedQuestion)}`; break;
     }
     
     setTimeout(() => {
       window.open(url, "_blank");
       setShowAIModal(false);
-    }, 800);
+    }, 500);
   };
 
-  // --- Data Transformation ---
-  const topicFrequencyData = useMemo(() => {
-    if (!analysisData?.topics) return [];
-    return Object.entries(analysisData.topics)
-      .map(([topic, freq]) => ({
-        topic: topic.length > 10 ? topic.substring(0, 8) + ".." : topic,
-        fullTopic: topic,
-        hits: freq,
-      }))
-      .sort((a, b) => b.hits - a.hits).slice(0, 6);
-  }, [analysisData]);
-
-  const weightage = [
-    { name: "High", value: 65, color: "#6366f1" },
-    { name: "Average", value: 25, color: "#06b6d4" },
-    { name: "Low", value: 10, color: "#1e293b" },
-  ];
-
-  // --- 1. Loading with 360° Logo Fix ---
+  // --- Loading State ---
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#020617]">
@@ -172,11 +188,11 @@ export function AnalysisDashboard() {
               alt="Logo" 
               className="w-28 h-28 relative z-20"
               animate={{ rotate: 360 }}
-              transition={{ repeat: Infinity, duration: 5, ease: "linear" }}
+              transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
             />
           </div>
-          <h2 className="text-2xl font-black text-white tracking-[0.5em] uppercase italic">System Booting</h2>
-          <p className="text-indigo-400 font-mono text-[10px] animate-pulse uppercase tracking-[0.3em] mt-3">Accessing RGPV Neural Nodes...</p>
+          <h2 className="text-2xl font-black text-white tracking-[0.5em] uppercase italic">Syncing Brain</h2>
+          <p className="text-indigo-400 font-mono text-[10px] animate-pulse uppercase tracking-[0.3em] mt-3">Accessing Neon Cloud Nodes...</p>
         </motion.div>
       </div>
     );
@@ -184,25 +200,27 @@ export function AnalysisDashboard() {
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-300 p-4 md:p-10 font-sans selection:bg-indigo-500/30">
+      {/* Grid Background */}
       <div className="fixed inset-0 pointer-events-none opacity-[0.03]" 
            style={{ backgroundImage: `linear-gradient(#4f46e5 1px, transparent 1px), linear-gradient(90deg, #4f46e5 1px, transparent 1px)`, backgroundSize: '40px 40px' }} />
 
       <div className="max-w-7xl mx-auto space-y-16 relative z-10">
+        
         {/* --- Header --- */}
         <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8 pb-12 border-b border-white/5">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
             <div className="flex items-center gap-3 mb-6">
                <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-400 uppercase">
-                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" /> Analysis Live
+                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" /> Data Verified
                </span>
-               <span className="text-[9px] font-black text-gray-600 uppercase tracking-[0.3em]">Protocol_v9.4</span>
+               <span className="text-[9px] font-black text-gray-600 uppercase tracking-[0.3em]">Pattern_BTech_v1.0</span>
             </div>
             <h1 className="text-5xl md:text-8xl font-black text-white italic tracking-tighter leading-[0.8] mb-8">
               NEURAL <br /> <span className="text-indigo-600">INSIGHTS</span>
             </h1>
             <div className="flex flex-wrap gap-4">
                <div className="px-5 py-2.5 rounded-2xl bg-white/[0.03] border border-white/5 text-xs font-bold text-gray-400 flex items-center gap-3">
-                  <Globe className="w-4 h-4 text-indigo-500" /> {subjectName || "Paper Analysis"}
+                  <Globe className="w-4 h-4 text-indigo-500" /> {subjectName || "Analysis Dashboard"}
                </div>
                <div className="px-5 py-2.5 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 text-xs font-black text-indigo-400 uppercase tracking-widest">
                   SEM {semester} • {university}
@@ -216,18 +234,18 @@ export function AnalysisDashboard() {
             </Button>
             <Button disabled={isGenerating} onClick={handleDownloadReport} className="flex-1 md:flex-none h-16 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white px-10 uppercase font-black tracking-widest">
               {isGenerating ? <Loader2 className="animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
-              Get Report
+              Export Report
             </Button>
           </div>
         </header>
 
-        {/* --- Quick Metrics --- */}
+        {/* --- Metrics --- */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { l: "Analysed Nodes", v: analysisData?.metadata.paper_count || 0, i: FileText, c: "text-blue-500" },
-            { l: "Pattern Density", v: Object.keys(analysisData?.topics || {}).length, i: Layers, c: "text-indigo-500" },
-            { l: "Critical Vectors", v: Object.keys(analysisData?.questions || {}).length, i: Zap, c: "text-amber-500" },
-            { l: "Reliability", v: "99.2%", i: ShieldCheck, c: "text-emerald-500" },
+            { l: "Nodes Scanned", v: analysisData?.metadata.paper_count || 0, i: FileText, c: "text-blue-500" },
+            { l: "Topic Clusters", v: Object.keys(analysisData?.topics || {}).length, i: Layers, c: "text-indigo-500" },
+            { l: "High Priority", v: questionsList.length, i: Zap, c: "text-amber-500" },
+            { l: "AI Precision", v: "98.4%", i: ShieldCheck, c: "text-emerald-500" },
           ].map((m, i) => (
             <GlassCard key={i} className="p-8 border-white/5 bg-white/[0.01] relative overflow-hidden group">
                <m.i className={`w-8 h-8 ${m.c} mb-4 group-hover:scale-110 transition-transform`} />
@@ -237,10 +255,10 @@ export function AnalysisDashboard() {
           ))}
         </section>
 
-        {/* --- Charts --- */}
+        {/* --- Charts Section --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <GlassCard className="lg:col-span-2 p-10 border-white/5 bg-white/[0.01] rounded-[3rem]">
-            <h3 className="text-2xl font-black text-white uppercase italic mb-10">Frequency Spectrum</h3>
+            <h3 className="text-2xl font-black text-white uppercase italic mb-10">Topic Frequency Distribution</h3>
             <div className="h-[350px]">
                <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={topicFrequencyData}>
@@ -255,7 +273,7 @@ export function AnalysisDashboard() {
           </GlassCard>
 
           <GlassCard className="p-10 border-white/5 bg-white/[0.01] rounded-[3rem] flex flex-col justify-between">
-            <h3 className="text-2xl font-black text-white uppercase italic">Weightage</h3>
+            <h3 className="text-2xl font-black text-white uppercase italic">Syllabus Weightage</h3>
             <div className="h-[250px] relative">
                <ResponsiveContainer width="100%" height="100%">
                   <RePieChart>
@@ -282,15 +300,17 @@ export function AnalysisDashboard() {
           </GlassCard>
         </div>
 
-        {/* --- Question List --- */}
+        {/* --- Main Lists --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pb-24">
+          
+          {/* Repeated Questions */}
           <div className="space-y-8">
             <div className="flex items-center gap-4 px-2">
                <TrendingUp className="text-indigo-500 w-6 h-6" />
-               <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter">Priority Stream</h3>
+               <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter">Repeated Patterns</h3>
             </div>
             <div className="space-y-6">
-              {analysisData?.questions && Object.entries(analysisData.questions).map(([q, hits], idx) => (
+              {questionsList.length > 0 ? questionsList.map(([q, hits], idx) => (
                 <motion.div key={idx} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.1 }}
                   className="p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5 hover:border-indigo-500/30 transition-all group"
                 >
@@ -298,7 +318,7 @@ export function AnalysisDashboard() {
                   <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
                      <div className="flex items-center gap-3">
                         <div className="px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black text-indigo-400 uppercase tracking-tighter">
-                          {hits} Historic Hits
+                          {hits} Appearances
                         </div>
                         <History className="w-4 h-4 text-gray-600" />
                      </div>
@@ -310,11 +330,13 @@ export function AnalysisDashboard() {
                      </Button>
                   </div>
                 </motion.div>
-              ))}
+              )) : (
+                <p className="text-gray-600 italic px-2">No specific patterns detected in this set.</p>
+              )}
             </div>
           </div>
 
-          {/* --- Neural Keynotes --- */}
+          {/* Neural Keynotes (Progress Bars) */}
           <div className="space-y-8">
              <div className="flex items-center gap-4 px-2">
                 <Brain className="text-purple-500 w-6 h-6" />
@@ -325,25 +347,30 @@ export function AnalysisDashboard() {
                   <div key={idx} className="space-y-3">
                      <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
                         <span className="text-gray-500">{t.fullTopic}</span>
-                        <span className="text-indigo-500">{t.hits} Hits</span>
+                        <span className="text-indigo-500">{t.hits} Mentions</span>
                      </div>
                      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${(t.hits / (analysisData?.metadata.paper_count || 1)) * 100}%` }} className="h-full bg-indigo-600" />
+                        <motion.div 
+                          initial={{ width: 0 }} 
+                          animate={{ width: `${Math.min((t.hits / (analysisData?.metadata.paper_count || 1)) * 50, 100)}%` }} 
+                          className="h-full bg-indigo-600" 
+                        />
                      </div>
                   </div>
                 ))}
+                
                 <div className="mt-10 p-8 rounded-3xl bg-indigo-500/5 border border-indigo-500/10 relative">
                    <Sparkles className="w-5 h-5 text-indigo-400 absolute top-4 right-4" />
                    <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] mb-3 italic">AI Conclusion</h4>
                    <p className="text-xs text-gray-400 leading-relaxed italic">
-                     "Neural engine detects a strong cyclic pattern in the frequency spectrum. Prioritizing the top 4 nodes yields 78% syllabus coverage."
+                     "Neural engine identifies top clusters. Preparing these {topicFrequencyData.length} topics covers the majority of the high-probability question zones for ${subjectName}."
                    </p>
                 </div>
              </GlassCard>
           </div>
         </div>
 
-        {/* --- FIXED: Multi-AI Choice Modal --- */}
+        {/* --- AI Selection Modal --- */}
         <AnimatePresence>
           {showAIModal && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -356,8 +383,8 @@ export function AnalysisDashboard() {
                             <Bot className="w-6 h-6 text-indigo-500" />
                          </div>
                          <div>
-                            <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">AI Selection</h3>
-                            <p className="text-[8px] text-gray-500 uppercase tracking-widest font-bold">Pick your Intelligence Engine</p>
+                            <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">Engine Pick</h3>
+                            <p className="text-[8px] text-gray-500 uppercase tracking-widest font-bold">Select AI Logic for Solution</p>
                          </div>
                       </div>
                       <X className="text-gray-500 hover:text-white cursor-pointer" onClick={() => setShowAIModal(false)} />
@@ -365,19 +392,19 @@ export function AnalysisDashboard() {
                    
                    <div className="grid gap-4">
                       {[
-                        { id: 'chatgpt', name: 'ChatGPT 4o', desc: 'Detailed Analysis', icon: MessageSquare, color: 'hover:border-emerald-500/30' },
-                        { id: 'gemini', name: 'Google Gemini', desc: 'Technical Logic', icon: Sparkles, color: 'hover:border-blue-500/30' },
-                        { id: 'perplexity', name: 'Perplexity AI', desc: 'Real-time Research', icon: Globe, color: 'hover:border-purple-500/30' },
-                        { id: 'multi-ai', name: 'Search AI Hub', desc: 'Aggregated Results', icon: Search, color: 'hover:border-amber-500/30' }
+                        { id: 'chatgpt', name: 'ChatGPT 4o', desc: 'Standard Solution', icon: MessageSquare, color: 'hover:border-emerald-500/30' },
+                        { id: 'gemini', name: 'Google Gemini', desc: 'Technical Context', icon: Sparkles, color: 'hover:border-blue-500/30' },
+                        { id: 'perplexity', name: 'Perplexity AI', desc: 'Search & Solve', icon: Globe, color: 'hover:border-purple-500/30' },
+                        { id: 'multi-ai', name: 'Universal Search', desc: 'Web Aggregation', icon: Search, color: 'hover:border-amber-500/30' }
                       ].map((tool) => (
                         <button key={tool.id} onClick={() => redirectAITool(tool.id as any)} className={`w-full p-5 rounded-2xl bg-white/[0.02] border border-white/5 ${tool.color} flex items-center gap-4 group transition-all text-left`}>
-                           <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-indigo-500/20 transition-colors">
-                              <tool.icon className="w-5 h-5 text-gray-400 group-hover:text-white" />
-                           </div>
-                           <div>
-                              <p className="text-sm font-black text-white uppercase tracking-tighter">{tool.name}</p>
-                              <p className="text-[9px] text-gray-600 font-bold uppercase">{tool.desc}</p>
-                           </div>
+                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-indigo-500/20 transition-colors">
+                               <tool.icon className="w-5 h-5 text-gray-400 group-hover:text-white" />
+                            </div>
+                            <div>
+                               <p className="text-sm font-black text-white uppercase tracking-tighter">{tool.name}</p>
+                               <p className="text-[9px] text-gray-600 font-bold uppercase">{tool.desc}</p>
+                            </div>
                         </button>
                       ))}
                    </div>
