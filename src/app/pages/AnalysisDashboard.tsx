@@ -77,7 +77,6 @@ export function AnalysisDashboard() {
       try {
         setLoading(true);
         const idsString = selectedPaperIds.join(",");
-        // Backend expects 'dashboard' endpoint
         const response = await fetch(`${API_BASE_URL}/dashboard/?paperIds=${idsString}`);
         
         if (!response.ok) throw new Error("Engine offline.");
@@ -89,18 +88,16 @@ export function AnalysisDashboard() {
         console.error("Fetch error:", err);
         toast.error("Uplink failed: Check Backend Terminal.");
       } finally {
-        // Keeping the dramatic loader for 2 seconds
         setTimeout(() => setLoading(false), 2000); 
       }
     };
     performAnalysis();
   }, [selectedPaperIds, navigate]);
 
-  // --- Data Transformation for Charts ---
+  // --- FIX 1: Data Transformation for Charts (TOP 10) ---
   const topicFrequencyData = useMemo(() => {
     if (!analysisData?.topics) return [];
     
-    // Converting Object { "Topic": 5 } to Array [{ topic: "Top..", hits: 5 }]
     return Object.entries(analysisData.topics)
       .map(([topic, freq]) => ({
         topic: topic.length > 12 ? topic.substring(0, 10) + ".." : topic,
@@ -108,12 +105,14 @@ export function AnalysisDashboard() {
         hits: freq,
       }))
       .sort((a, b) => b.hits - a.hits)
-      .slice(0, 8); // Showing top 8 for better UI
+      .slice(0, 10); // Updated from 1/8 to 10 for better coverage
   }, [analysisData]);
 
+  // --- FIX 2: Questions list to Array mapping ---
   const questionsList = useMemo(() => {
     if (!analysisData?.questions) return [];
-    return Object.entries(analysisData.questions);
+    return Object.entries(analysisData.questions)
+      .sort((a, b) => b[1] - a[1]); // Sort by frequency
   }, [analysisData]);
 
   const weightage = [
@@ -152,7 +151,7 @@ export function AnalysisDashboard() {
   const redirectAITool = async (tool: 'chatgpt' | 'gemini' | 'perplexity' | 'multi-ai') => {
     if (!selectedQuestion) return;
 
-    const prompt = `Question: ${selectedQuestion}\n\nAct as a B.Tech professor. Provide a detailed university-standard answer for ${subjectName}. Include points, technical keywords, and mention diagram requirements.`;
+    const prompt = `Question: ${selectedQuestion}\n\nAct as a B.Tech professor. Provide a detailed university-standard answer for ${subjectName} as per RGPV/University standards. Include points, technical keywords, and mention diagram requirements.`;
 
     try {
       await navigator.clipboard.writeText(prompt);
@@ -183,13 +182,13 @@ export function AnalysisDashboard() {
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="relative z-10 text-center">
           <div className="relative mb-10 flex justify-center">
             <div className="absolute w-44 h-44 rounded-full border border-indigo-500/10 animate-[spin_15s_linear_infinite]" />
-            <motion.img 
-              src="/logo.png" 
-              alt="Logo" 
-              className="w-28 h-28 relative z-20"
+            <motion.div 
+              className="w-28 h-28 bg-indigo-600 rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(79,70,229,0.4)]"
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
-            />
+            >
+                <Brain className="w-14 h-14 text-white" />
+            </motion.div>
           </div>
           <h2 className="text-2xl font-black text-white tracking-[0.5em] uppercase italic">Syncing Brain</h2>
           <p className="text-indigo-400 font-mono text-[10px] animate-pulse uppercase tracking-[0.3em] mt-3">Accessing Neon Cloud Nodes...</p>
@@ -200,7 +199,6 @@ export function AnalysisDashboard() {
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-300 p-4 md:p-10 font-sans selection:bg-indigo-500/30">
-      {/* Grid Background */}
       <div className="fixed inset-0 pointer-events-none opacity-[0.03]" 
            style={{ backgroundImage: `linear-gradient(#4f46e5 1px, transparent 1px), linear-gradient(90deg, #4f46e5 1px, transparent 1px)`, backgroundSize: '40px 40px' }} />
 
@@ -303,47 +301,51 @@ export function AnalysisDashboard() {
         {/* --- Main Lists --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pb-24">
           
-          {/* Repeated Questions */}
+          {/* Repeated Questions FIX: Added proper mapping */}
           <div className="space-y-8">
             <div className="flex items-center gap-4 px-2">
                <TrendingUp className="text-indigo-500 w-6 h-6" />
                <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter">Repeated Patterns</h3>
             </div>
             <div className="space-y-6">
-              {questionsList.length > 0 ? questionsList.map(([q, hits], idx) => (
-                <motion.div key={idx} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.1 }}
-                  className="p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5 hover:border-indigo-500/30 transition-all group"
-                >
-                  <p className="text-lg font-bold text-gray-200 mb-8 italic group-hover:text-white transition-colors">"{q}"</p>
-                  <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
-                     <div className="flex items-center gap-3">
-                        <div className="px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black text-indigo-400 uppercase tracking-tighter">
-                          {hits} Appearances
-                        </div>
-                        <History className="w-4 h-4 text-gray-600" />
-                     </div>
-                     <Button 
-                       onClick={() => { setSelectedQuestion(q); setShowAIModal(true); }}
-                       className="w-full sm:w-auto h-14 rounded-2xl bg-indigo-600 hover:bg-white hover:text-indigo-600 text-white font-black uppercase text-[10px] tracking-widest px-8 transition-all"
-                     >
-                       Solve with AI <ExternalLink className="w-3 h-3 ml-2" />
-                     </Button>
-                  </div>
-                </motion.div>
-              )) : (
-                <p className="text-gray-600 italic px-2">No specific patterns detected in this set.</p>
+              {questionsList.length > 0 ? (
+                questionsList.map(([q, hits], idx) => (
+                  <motion.div key={idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }}
+                    className="p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5 hover:border-indigo-500/30 transition-all group"
+                  >
+                    <p className="text-lg font-bold text-gray-200 mb-8 italic group-hover:text-white transition-colors">"{q}"</p>
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
+                       <div className="flex items-center gap-3">
+                          <div className="px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black text-indigo-400 uppercase tracking-tighter">
+                            {hits} Appearances
+                          </div>
+                          <History className="w-4 h-4 text-gray-600" />
+                       </div>
+                       <Button 
+                         onClick={() => { setSelectedQuestion(q); setShowAIModal(true); }}
+                         className="w-full sm:w-auto h-14 rounded-2xl bg-indigo-600 hover:bg-white hover:text-indigo-600 text-white font-black uppercase text-[10px] tracking-widest px-8 transition-all"
+                       >
+                         Solve with AI <ExternalLink className="w-3 h-3 ml-2" />
+                       </Button>
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="text-center py-10 border border-dashed border-white/10 rounded-3xl">
+                   <p className="text-gray-500 italic">No patterns found. Try selecting more papers.</p>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Neural Keynotes (Progress Bars) */}
+          {/* Neural Keynotes */}
           <div className="space-y-8">
              <div className="flex items-center gap-4 px-2">
                 <Brain className="text-purple-500 w-6 h-6" />
                 <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter">Neural Keynotes</h3>
              </div>
              <GlassCard className="p-10 border-white/5 bg-white/[0.01] rounded-[3rem] space-y-10">
-                {topicFrequencyData.map((t, idx) => (
+                {topicFrequencyData.length > 0 ? topicFrequencyData.map((t, idx) => (
                   <div key={idx} className="space-y-3">
                      <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
                         <span className="text-gray-500">{t.fullTopic}</span>
@@ -352,18 +354,18 @@ export function AnalysisDashboard() {
                      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                         <motion.div 
                           initial={{ width: 0 }} 
-                          animate={{ width: `${Math.min((t.hits / (analysisData?.metadata.paper_count || 1)) * 50, 100)}%` }} 
+                          animate={{ width: `${Math.min((t.hits / (analysisData?.metadata.paper_count || 5)) * 100, 100)}%` }} 
                           className="h-full bg-indigo-600" 
                         />
                      </div>
                   </div>
-                ))}
+                )) : <p className="text-gray-600 italic">Processing topics...</p>}
                 
                 <div className="mt-10 p-8 rounded-3xl bg-indigo-500/5 border border-indigo-500/10 relative">
                    <Sparkles className="w-5 h-5 text-indigo-400 absolute top-4 right-4" />
                    <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] mb-3 italic">AI Conclusion</h4>
                    <p className="text-xs text-gray-400 leading-relaxed italic">
-                     "Neural engine identifies top clusters. Preparing these {topicFrequencyData.length} topics covers the majority of the high-probability question zones for ${subjectName}."
+                     "Neural engine identifies top clusters. Preparing these {topicFrequencyData.length} topics covers the majority of high-probability zones for {subjectName}."
                    </p>
                 </div>
              </GlassCard>
