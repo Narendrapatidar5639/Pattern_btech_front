@@ -161,9 +161,8 @@ export function AnalysisDashboard() {
     let url = "";
     switch(tool) {
       case 'chatgpt': 
-        // ChatGPT doesn't support long query params reliably, so we use clipboard
-        toast.info("Prompt copied! Paste it in ChatGPT.");
-        url = `https://chatgpt.com/`; 
+        // Direct Query Injection for ChatGPT
+        url = `https://chatgpt.com/?q=${encodeURIComponent(fullPrompt)}`; 
         break;
       case 'perplexity': 
         url = `https://www.perplexity.ai/search?q=${encodeURIComponent(fullPrompt)}`; 
