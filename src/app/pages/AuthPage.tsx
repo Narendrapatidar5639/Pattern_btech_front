@@ -29,7 +29,7 @@ export function AuthPage() {
 
   const navigate = useNavigate();
   const { login } = useAuth();
-const API_BASE_URL = "https://narendrapatidarbtai-btech-backend.hf.space";
+  const API_BASE_URL = "https://narendrapatidarbtai-btech-backend.hf.space";
 
   // --- Password Strength Logic ---
   const passwordCriteria = {
@@ -61,7 +61,6 @@ const API_BASE_URL = "https://narendrapatidarbtai-btech-backend.hf.space";
 
       const data = await response.json();
       if (response.ok) {
-        // Saving full user object to AuthContext & LocalStorage
         const userData = {
             id: data.user.id,
             full_name: data.user.full_name || user.displayName,
@@ -87,7 +86,6 @@ const API_BASE_URL = "https://narendrapatidarbtai-btech-backend.hf.space";
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validations for Signup
     if (!isLogin && !isForgotPassword) {
       if (!isPasswordStrong) {
         return toast.error("Password does not meet security protocols!");
@@ -120,7 +118,6 @@ const API_BASE_URL = "https://narendrapatidarbtai-btech-backend.hf.space";
           toast.success("Recovery link dispatched to neural-mail.");
           setIsForgotPassword(false);
         } else {
-          // Success Login/Signup
           const userData = data.user || { full_name: formData.name, email: formData.email };
           login(data.token || "session_active", JSON.stringify(userData));
           localStorage.setItem("user", JSON.stringify(userData));
@@ -139,7 +136,7 @@ const API_BASE_URL = "https://narendrapatidarbtai-btech-backend.hf.space";
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center px-6 py-20 overflow-hidden bg-[#02020a] font-sans">
+    <div className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 py-10 lg:py-20 overflow-x-hidden bg-[#02020a] font-sans">
       
       {/* Background Neural Elements */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
@@ -148,58 +145,67 @@ const API_BASE_URL = "https://narendrapatidarbtai-btech-backend.hf.space";
         <div className="absolute inset-0 opacity-[0.1] bg-[radial-gradient(#ffffff33_1px,transparent_1px)] bg-[size:32px_32px]" />
       </div>
 
-      <div className="relative z-10 max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      <div className="relative z-10 max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
         
-        {/* Left Side: Brand & Visuals */}
-        <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }} className="hidden lg:flex flex-col items-start">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-8">
+        {/* --- ADJUSTED: Brand & Visuals (Visible on all screens now) --- */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 0.8 }} 
+          className="flex flex-col items-center lg:items-start text-center lg:text-left"
+        >
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-6 lg:mb-8">
             <ShieldCheck className="w-3 h-3" /> Secure Neural Access
           </div>
           
-          <h1 className="text-7xl font-black mb-6 italic uppercase leading-[0.9] tracking-tighter text-white">
+          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black mb-4 lg:mb-6 italic uppercase leading-[1] lg:leading-[0.9] tracking-tighter text-white">
             JOIN THE <br />
-            <span className="text-transparent" style={{ WebkitTextStroke: '1.5px white' }}>REVOLUTION</span>
+            <span className="text-transparent" style={{ WebkitTextStroke: '1px white' }}>REVOLUTION</span>
           </h1>
           
-          <p className="text-gray-400 text-lg mb-12 max-w-md font-medium border-l-2 border-indigo-600 pl-6">
+          <p className="text-gray-400 text-sm sm:text-lg mb-8 lg:mb-12 max-w-md font-medium border-l-0 lg:border-l-2 border-indigo-600 pl-0 lg:pl-6">
             Enter the neural network of <span className="text-white font-bold">PatternBTech</span> and unlock high-precision exam analytics.
           </p>
 
-          <div className="relative w-72 h-72 flex items-center justify-center ml-10">
+          <div className="relative w-48 h-48 sm:w-64 sm:h-64 lg:w-72 lg:h-72 flex items-center justify-center lg:ml-10">
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 25, repeat: Infinity, ease: "linear" }} className="absolute inset-0 rounded-full border-2 border-dashed border-indigo-500/20" />
-            <div className="relative w-48 h-48 rounded-full overflow-hidden border border-indigo-500/30 p-2 bg-black/40 backdrop-blur-md shadow-[0_0_50px_rgba(99,102,241,0.2)]">
-               <img src="/logo.png" className="w-full h-full object-cover rounded-full brightness-110" alt="PatternBTech Logo" />
+            <div className="relative w-32 h-32 sm:w-44 sm:h-44 lg:w-48 lg:h-48 rounded-full overflow-hidden border border-indigo-500/30 p-2 bg-black/40 backdrop-blur-md shadow-[0_0_50px_rgba(99,102,241,0.2)]">
+                <img src="/logo.png" className="w-full h-full object-cover rounded-full brightness-110" alt="PatternBTech Logo" />
             </div>
-            <div className="absolute -top-4 -right-4 p-3 bg-[#0a0a1a] border border-white/10 rounded-xl shadow-2xl">
-                <Terminal className="w-6 h-6 text-indigo-500" />
+            <div className="absolute -top-2 -right-2 lg:-top-4 lg:-right-4 p-2 lg:p-3 bg-[#0a0a1a] border border-white/10 rounded-xl shadow-2xl">
+                <Terminal className="w-4 h-4 lg:w-6 lg:h-6 text-indigo-500" />
             </div>
           </div>
         </motion.div>
 
         {/* Right Side: Auth Terminal */}
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md mx-auto">
-          <GlassCard className="p-10 border-white/10 bg-white/[0.03] backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-[2.5rem]">
-            <div className="space-y-8">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          className="w-full max-w-md mx-auto"
+        >
+          <GlassCard className="p-6 sm:p-10 border-white/10 bg-white/[0.03] backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-[2rem] lg:rounded-[2.5rem]">
+            <div className="space-y-6 lg:space-y-8">
               
               {!isForgotPassword && (
-                <div className="flex p-1.5 bg-black/40 rounded-2xl border border-white/5">
-                  <button onClick={() => setIsLogin(true)} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isLogin ? "bg-indigo-600 text-white shadow-lg" : "text-gray-500 hover:text-gray-300"}`}>Login</button>
-                  <button onClick={() => setIsLogin(false)} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${!isLogin ? "bg-indigo-600 text-white shadow-lg" : "text-gray-500 hover:text-gray-300"}`}>Sign Up</button>
+                <div className="flex p-1 bg-black/40 rounded-2xl border border-white/5">
+                  <button onClick={() => setIsLogin(true)} className={`flex-1 py-2.5 lg:py-3 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-widest transition-all ${isLogin ? "bg-indigo-600 text-white shadow-lg" : "text-gray-500 hover:text-gray-300"}`}>Login</button>
+                  <button onClick={() => setIsLogin(false)} className={`flex-1 py-2.5 lg:py-3 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-widest transition-all ${!isLogin ? "bg-indigo-600 text-white shadow-lg" : "text-gray-500 hover:text-gray-300"}`}>Sign Up</button>
                 </div>
               )}
 
               <div className="text-center space-y-2">
-                <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white">
+                <h2 className="text-2xl lg:text-4xl font-black italic uppercase tracking-tighter text-white">
                   {isForgotPassword ? "Recovery" : (isLogin ? "Welcome Back" : "New Account")}
                 </h2>
-                <p className="text-gray-500 text-[10px] uppercase tracking-[0.2em] font-bold">
+                <p className="text-gray-500 text-[9px] lg:text-[10px] uppercase tracking-[0.2em] font-bold">
                   {isForgotPassword ? "Access your neural link" : "Authentication Required"}
                 </p>
               </div>
 
               {!isForgotPassword && (
                 <div className="space-y-6">
-                  <Button onClick={handleGoogleAuth} variant="outline" disabled={isLoading} className="w-full border-white/5 bg-white/5 hover:bg-white/10 py-7 gap-4 rounded-2xl transition-all group active:scale-95">
+                  <Button onClick={handleGoogleAuth} variant="outline" disabled={isLoading} className="w-full border-white/5 bg-white/5 hover:bg-white/10 py-6 lg:py-7 gap-4 rounded-2xl transition-all group active:scale-95">
                     <svg className="w-5 h-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -214,7 +220,7 @@ const API_BASE_URL = "https://narendrapatidarbtai-btech-backend.hf.space";
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-5">
                 {!isLogin && !isForgotPassword && (
                   <div className="space-y-2">
                     <Label className="text-[10px] uppercase tracking-widest text-gray-500 font-black ml-2">Full Name</Label>
@@ -244,7 +250,6 @@ const API_BASE_URL = "https://narendrapatidarbtai-btech-backend.hf.space";
                       </div>
                     </div>
 
-                    {/* --- NEW: Password Strength Indicator --- */}
                     {!isLogin && formData.password.length > 0 && (
                       <div className="grid grid-cols-2 gap-2 px-2">
                          <div className={`flex items-center gap-1.5 text-[8px] font-black uppercase ${passwordCriteria.length ? 'text-emerald-500' : 'text-gray-600'}`}>
