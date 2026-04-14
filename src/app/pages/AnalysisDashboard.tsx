@@ -51,7 +51,7 @@ interface AnalysisResponse {
   };
 }
 
-const API_BASE_URL = "https://pattern-btech-backend.onrender.com/api";
+const API_BASE_URL = "https://narendrapatidarbtai-btech-backend.hf.space/api";
 
 export function AnalysisDashboard() {
   const location = useLocation();
