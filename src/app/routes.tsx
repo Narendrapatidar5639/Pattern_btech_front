@@ -1,6 +1,9 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter } from "react-router-dom";
 import { RootLayout } from "./components/layouts/RootLayout";
 import { AdminLayout } from "./components/layouts/AdminLayout";
+import { ProtectedRoute } from "./components/ProtectedRoute"; // Auth guard import
+
+// Pages Imports
 import { HomePage } from "./pages/HomePage";
 import { AuthPage } from "./pages/AuthPage";
 import { HowItWorksPage } from "./pages/HowItWorksPage";
@@ -9,11 +12,13 @@ import { PapersPage } from "./pages/PapersPage";
 import { AnalysisDashboard } from "./pages/AnalysisDashboard";
 import { AboutPage } from "./pages/AboutPage";
 import { ContactPage } from "./pages/ContactPage";
+import { NotFound } from "./pages/NotFound";
+
+// Admin Pages Imports
 import { AdminAuthPage } from "./pages/admin/AdminAuthPage";
 import { AdminDashboard } from "./pages/admin/AdminDashboard";
 import { AdminUploadPage } from "./pages/admin/AdminUploadPage";
 import { AdminReportsPage } from "./pages/admin/AdminReportsPage";
-import { NotFound } from "./pages/NotFound";
 
 export const router = createBrowserRouter([
   {
@@ -25,7 +30,7 @@ export const router = createBrowserRouter([
       { path: "how-it-works", Component: HowItWorksPage },
       { path: "selection", Component: SelectionPage },
       { path: "papers", Component: PapersPage },
-     { path: "dashboard", Component: AnalysisDashboard },
+      { path: "dashboard", Component: AnalysisDashboard },
       { path: "about", Component: AboutPage },
       { path: "contact", Component: ContactPage },
     ],
@@ -34,10 +39,18 @@ export const router = createBrowserRouter([
     path: "/admin",
     Component: AdminLayout,
     children: [
+      // 1. Admin Login Page (Ye hamesha accessible rahega)
       { index: true, Component: AdminAuthPage },
-      { path: "dashboard", Component: AdminDashboard },
-      { path: "upload", Component: AdminUploadPage },
-      { path: "reports", Component: AdminReportsPage },
+      
+      // 2. Protected Admin Routes (Inke liye login zaroori hai)
+      {
+        element: <ProtectedRoute />, 
+        children: [
+          { path: "dashboard", Component: AdminDashboard },
+          { path: "upload", Component: AdminUploadPage },
+          { path: "reports", Component: AdminReportsPage },
+        ],
+      },
     ],
   },
   {
