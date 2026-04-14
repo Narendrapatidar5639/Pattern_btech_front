@@ -6,7 +6,6 @@ import {
   Download, 
   TrendingUp, 
   FileText, 
-  Brain, 
   Sparkles,
   Loader2,
   ArrowLeft,
@@ -86,7 +85,7 @@ export function AnalysisDashboard() {
         toast.success("Neural Link Established");
       } catch (err: any) {
         console.error("Fetch error:", err);
-        toast.error("Uplink failed: Check Backend Terminal.");
+        toast.error("Uplink failed: Check Backend.");
       } finally {
         setTimeout(() => setLoading(false), 2000); 
       }
@@ -94,7 +93,7 @@ export function AnalysisDashboard() {
     performAnalysis();
   }, [selectedPaperIds, navigate]);
 
-  // --- FIX 1: Data Transformation for Charts (TOP 10) ---
+  // --- Data Transformation for Charts ---
   const topicFrequencyData = useMemo(() => {
     if (!analysisData?.topics) return [];
     
@@ -105,14 +104,13 @@ export function AnalysisDashboard() {
         hits: freq,
       }))
       .sort((a, b) => b.hits - a.hits)
-      .slice(0, 10); // Updated from 1/8 to 10 for better coverage
+      .slice(0, 10);
   }, [analysisData]);
 
-  // --- FIX 2: Questions list to Array mapping ---
   const questionsList = useMemo(() => {
     if (!analysisData?.questions) return [];
     return Object.entries(analysisData.questions)
-      .sort((a, b) => b[1] - a[1]); // Sort by frequency
+      .sort((a, b) => b[1] - a[1]); 
   }, [analysisData]);
 
   const weightage = [
@@ -147,25 +145,32 @@ export function AnalysisDashboard() {
     }, 1500);
   };
 
-  // --- AI Redirect Logic ---
-  const redirectAITool = async (tool: 'chatgpt' | 'gemini' | 'perplexity' | 'multi-ai') => {
+  // --- AI Redirect Logic (FIXED: Pass question in URL) ---
+  const redirectAITool = async (tool: 'chatgpt' | 'perplexity' | 'google') => {
     if (!selectedQuestion) return;
 
-    const prompt = `Question: ${selectedQuestion}\n\nAct as a B.Tech professor. Provide a detailed university-standard answer for ${subjectName} as per RGPV/University standards. Include points, technical keywords, and mention diagram requirements.`;
+    const fullPrompt = `Question: ${selectedQuestion}\n\nAct as a B.Tech professor. Provide a detailed university-standard answer for ${subjectName} as per RGPV/University standards. Include points and technical keywords.`;
 
+    // Copy to clipboard regardless as a safety net
     try {
-      await navigator.clipboard.writeText(prompt);
-      toast.info("Prompt copied! Paste it in the AI window.", { duration: 3000 });
+      await navigator.clipboard.writeText(fullPrompt);
     } catch (err) {
       console.error("Clipboard failed");
     }
 
     let url = "";
     switch(tool) {
-      case 'chatgpt': url = `https://chatgpt.com/`; break;
-      case 'gemini': url = `https://gemini.google.com/app`; break;
-      case 'perplexity': url = `https://www.perplexity.ai/`; break;
-      case 'multi-ai': url = `https://www.google.com/search?q=${encodeURIComponent(selectedQuestion)}`; break;
+      case 'chatgpt': 
+        // ChatGPT doesn't support long query params reliably, so we use clipboard
+        toast.info("Prompt copied! Paste it in ChatGPT.");
+        url = `https://chatgpt.com/`; 
+        break;
+      case 'perplexity': 
+        url = `https://www.perplexity.ai/search?q=${encodeURIComponent(fullPrompt)}`; 
+        break;
+      case 'google': 
+        url = `https://www.google.com/search?q=${encodeURIComponent(selectedQuestion + " " + subjectName + " university answer")}`; 
+        break;
     }
     
     setTimeout(() => {
@@ -174,20 +179,22 @@ export function AnalysisDashboard() {
     }, 500);
   };
 
-  // --- Loading State ---
+  // --- Loading State (FIXED: Added Logo.png with Rotation) ---
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#020617]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/10 via-transparent to-transparent" />
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="relative z-10 text-center">
           <div className="relative mb-10 flex justify-center">
-            <div className="absolute w-44 h-44 rounded-full border border-indigo-500/10 animate-[spin_15s_linear_infinite]" />
+            {/* Outer spinning ring */}
+            <div className="absolute w-44 h-44 rounded-full border border-indigo-500/20 animate-[spin_10s_linear_infinite]" />
             <motion.div 
-              className="w-28 h-28 bg-indigo-600 rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(79,70,229,0.4)]"
+              className="w-28 h-28 bg-indigo-600/10 rounded-3xl flex items-center justify-center shadow-[0_0_50px_rgba(79,70,229,0.2)] overflow-hidden"
               animate={{ rotate: 360 }}
-              transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
+              transition={{ repeat: Infinity, duration: 6, ease: "linear" }}
             >
-                <Brain className="w-14 h-14 text-white" />
+              {/* FIXED: Using logo.png instead of Brain icon */}
+              <img src="/logo.png" alt="Logo" className="w-20 h-20 object-contain" />
             </motion.div>
           </div>
           <h2 className="text-2xl font-black text-white tracking-[0.5em] uppercase italic">Syncing Brain</h2>
@@ -221,7 +228,7 @@ export function AnalysisDashboard() {
                   <Globe className="w-4 h-4 text-indigo-500" /> {subjectName || "Analysis Dashboard"}
                </div>
                <div className="px-5 py-2.5 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 text-xs font-black text-indigo-400 uppercase tracking-widest">
-                  SEM {semester} • {university}
+                 SEM {semester} • {university}
                </div>
             </div>
           </motion.div>
@@ -300,8 +307,6 @@ export function AnalysisDashboard() {
 
         {/* --- Main Lists --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 pb-24">
-          
-          {/* Repeated Questions FIX: Added proper mapping */}
           <div className="space-y-8">
             <div className="flex items-center gap-4 px-2">
                <TrendingUp className="text-indigo-500 w-6 h-6" />
@@ -325,27 +330,26 @@ export function AnalysisDashboard() {
                          onClick={() => { setSelectedQuestion(q); setShowAIModal(true); }}
                          className="w-full sm:w-auto h-14 rounded-2xl bg-indigo-600 hover:bg-white hover:text-indigo-600 text-white font-black uppercase text-[10px] tracking-widest px-8 transition-all"
                        >
-                         Solve with AI <ExternalLink className="w-3 h-3 ml-2" />
+                         View Answer <ExternalLink className="w-3 h-3 ml-2" />
                        </Button>
                     </div>
                   </motion.div>
                 ))
               ) : (
                 <div className="text-center py-10 border border-dashed border-white/10 rounded-3xl">
-                   <p className="text-gray-500 italic">No patterns found. Try selecting more papers.</p>
+                   <p className="text-gray-500 italic">No patterns found.</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Neural Keynotes */}
           <div className="space-y-8">
              <div className="flex items-center gap-4 px-2">
-                <Brain className="text-purple-500 w-6 h-6" />
+                <Sparkles className="text-purple-500 w-6 h-6" />
                 <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter">Neural Keynotes</h3>
              </div>
              <GlassCard className="p-10 border-white/5 bg-white/[0.01] rounded-[3rem] space-y-10">
-                {topicFrequencyData.length > 0 ? topicFrequencyData.map((t, idx) => (
+                {topicFrequencyData.map((t, idx) => (
                   <div key={idx} className="space-y-3">
                      <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
                         <span className="text-gray-500">{t.fullTopic}</span>
@@ -359,56 +363,57 @@ export function AnalysisDashboard() {
                         />
                      </div>
                   </div>
-                )) : <p className="text-gray-600 italic">Processing topics...</p>}
+                ))}
                 
                 <div className="mt-10 p-8 rounded-3xl bg-indigo-500/5 border border-indigo-500/10 relative">
-                   <Sparkles className="w-5 h-5 text-indigo-400 absolute top-4 right-4" />
                    <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] mb-3 italic">AI Conclusion</h4>
                    <p className="text-xs text-gray-400 leading-relaxed italic">
-                     "Neural engine identifies top clusters. Preparing these {topicFrequencyData.length} topics covers the majority of high-probability zones for {subjectName}."
+                     "Neural engine identifies high-probability zones for {subjectName}. Focus on top clusters for 80% coverage."
                    </p>
                 </div>
              </GlassCard>
           </div>
         </div>
 
-        {/* --- AI Selection Modal --- */}
+        {/* --- AI Selection Modal (FIXED: Simplified to ChatGPT, Perplexity, Google) --- */}
         <AnimatePresence>
           {showAIModal && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/85 backdrop-blur-xl" onClick={() => setShowAIModal(false)} />
-              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-md">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setShowAIModal(false)} />
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-sm">
                 <GlassCard className="p-8 border-white/10 bg-[#0a0f1e] rounded-[2.5rem] shadow-2xl">
                    <div className="flex justify-between items-center mb-8">
                       <div className="flex items-center gap-3">
-                         <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                            <Bot className="w-6 h-6 text-indigo-500" />
-                         </div>
-                         <div>
-                            <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">Engine Pick</h3>
-                            <p className="text-[8px] text-gray-500 uppercase tracking-widest font-bold">Select AI Logic for Solution</p>
-                         </div>
+                         <Bot className="w-6 h-6 text-indigo-500" />
+                         <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">View Answer</h3>
                       </div>
                       <X className="text-gray-500 hover:text-white cursor-pointer" onClick={() => setShowAIModal(false)} />
                    </div>
                    
                    <div className="grid gap-4">
-                      {[
-                        { id: 'chatgpt', name: 'ChatGPT 4o', desc: 'Standard Solution', icon: MessageSquare, color: 'hover:border-emerald-500/30' },
-                        { id: 'gemini', name: 'Google Gemini', desc: 'Technical Context', icon: Sparkles, color: 'hover:border-blue-500/30' },
-                        { id: 'perplexity', name: 'Perplexity AI', desc: 'Search & Solve', icon: Globe, color: 'hover:border-purple-500/30' },
-                        { id: 'multi-ai', name: 'Universal Search', desc: 'Web Aggregation', icon: Search, color: 'hover:border-amber-500/30' }
-                      ].map((tool) => (
-                        <button key={tool.id} onClick={() => redirectAITool(tool.id as any)} className={`w-full p-5 rounded-2xl bg-white/[0.02] border border-white/5 ${tool.color} flex items-center gap-4 group transition-all text-left`}>
-                            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-indigo-500/20 transition-colors">
-                               <tool.icon className="w-5 h-5 text-gray-400 group-hover:text-white" />
-                            </div>
-                            <div>
-                               <p className="text-sm font-black text-white uppercase tracking-tighter">{tool.name}</p>
-                               <p className="text-[9px] text-gray-600 font-bold uppercase">{tool.desc}</p>
-                            </div>
-                        </button>
-                      ))}
+                      <button onClick={() => redirectAITool('chatgpt')} className="w-full p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-emerald-500/40 flex items-center gap-4 group transition-all">
+                        <MessageSquare className="w-5 h-5 text-emerald-500" />
+                        <div className="text-left">
+                          <p className="text-sm font-black text-white uppercase">ChatGPT</p>
+                          <p className="text-[8px] text-gray-500 uppercase">Copied to clipboard</p>
+                        </div>
+                      </button>
+
+                      <button onClick={() => redirectAITool('perplexity')} className="w-full p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-blue-500/40 flex items-center gap-4 group transition-all">
+                        <Globe className="w-5 h-5 text-blue-400" />
+                        <div className="text-left">
+                          <p className="text-sm font-black text-white uppercase">Perplexity AI</p>
+                          <p className="text-[8px] text-gray-500 uppercase">Direct Search</p>
+                        </div>
+                      </button>
+
+                      <button onClick={() => redirectAITool('google')} className="w-full p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-amber-500/40 flex items-center gap-4 group transition-all">
+                        <Search className="w-5 h-5 text-amber-500" />
+                        <div className="text-left">
+                          <p className="text-sm font-black text-white uppercase">Google Search</p>
+                          <p className="text-[8px] text-gray-500 uppercase">Quick Results</p>
+                        </div>
+                      </button>
                    </div>
                 </GlassCard>
               </motion.div>
