@@ -2,7 +2,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Menu, X, Sun, Moon, LogOut, 
-  LayoutDashboard, User as UserIcon, ShieldCheck, Zap
+  LayoutDashboard, User as UserIcon, ShieldCheck, Zap, 
+  Home, Settings, Info, Mail, Activity
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "./ui/button";
@@ -12,6 +13,7 @@ import { useTheme } from "../contexts/ThemeProvider";
 interface NavLink {
   name: string;
   path: string;
+  icon: React.ReactNode;
 }
 
 export function Navbar() {
@@ -28,16 +30,13 @@ export function Navbar() {
   const isGlobalDark = theme === "dark";
 
   // --- ROBUST USER DATA EXTRACTION ---
-  // Is logic se hum ensure karte hain ki real name hi UI me flow ho
   const displayData = useMemo(() => {
-    // 1. Context se user lo, nahi toh LocalStorage se
     const localUser = JSON.parse(localStorage.getItem("user") || "{}");
     const currentUser = user || localUser;
 
     const fullName = currentUser?.full_name || currentUser?.displayName || "Neural User";
     const email = currentUser?.email || "active.session@pattern.tech";
     
-    // Initials logic (e.g., Narendra Patidar -> NP)
     const initials = fullName
       .split(' ')
       .map((n: string) => n[0])
@@ -47,6 +46,16 @@ export function Navbar() {
 
     return { fullName, email, initials, raw: currentUser };
   }, [user]);
+
+  // Prevent Body Scroll when Mobile Menu is Open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => { document.body.style.overflow = "unset"; };
+  }, [mobileMenuOpen]);
 
   // Click outside logic
   useEffect(() => {
@@ -67,20 +76,20 @@ export function Navbar() {
   }, []);
 
   const navLinks: NavLink[] = [
-    { name: "Home", path: "/" },
-    { name: "Analysis", path: "/selection" },
-    { name: "Mechanism", path: "/how-it-works" },
-    { name: "About", path: "/about" },
-    { name: "Contact", path: "/contact" },
+    { name: "Home", path: "/", icon: <Home className="w-4 h-4" /> },
+    { name: "Analysis", path: "/selection", icon: <Activity className="w-4 h-4" /> },
+    { name: "Mechanism", path: "/how-it-works", icon: <Settings className="w-4 h-4" /> },
+    { name: "About", path: "/about", icon: <Info className="w-4 h-4" /> },
+    { name: "Contact", path: "/contact", icon: <Mail className="w-4 h-4" /> },
   ];
 
   const isActive = (path: string): boolean => location.pathname === path;
 
   return (
     <nav 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 border-b ${
+      className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 border-b ${
         scrolled 
-          ? "py-2 bg-[#02020a]/80 backdrop-blur-2xl border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)]" 
+          ? "py-2 bg-[#02020a]/85 backdrop-blur-2xl border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)]" 
           : "py-5 bg-[#02020a] border-transparent"
       }`}
     >
@@ -120,7 +129,7 @@ export function Navbar() {
               <Link 
                 key={link.path} 
                 to={link.path} 
-                className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] transition-all relative ${
+                className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] transition-all relative flex items-center gap-2 ${
                   isActive(link.path) ? "text-white" : "text-gray-500 hover:text-indigo-400"
                 }`}
               >
@@ -131,6 +140,7 @@ export function Navbar() {
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
+                <span className="opacity-70">{link.icon}</span>
                 {link.name}
               </Link>
             ))}
@@ -154,9 +164,9 @@ export function Navbar() {
                 >
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-fuchsia-600 p-[1px]">
                     <div className="w-full h-full rounded-xl bg-[#02020a] flex items-center justify-center text-white text-xs font-black tracking-tighter overflow-hidden">
-                       {displayData.raw?.photoURL ? (
-                         <img src={displayData.raw.photoURL} alt="User" className="w-full h-full object-cover" />
-                       ) : displayData.initials}
+                        {displayData.raw?.photoURL ? (
+                          <img src={displayData.raw.photoURL} alt="User" className="w-full h-full object-cover" />
+                        ) : displayData.initials}
                     </div>
                   </div>
                   <div className="flex flex-col items-start leading-tight">
@@ -169,7 +179,6 @@ export function Navbar() {
                   </div>
                 </button>
 
-                {/* --- USER DROPDOWN MENU --- */}
                 <AnimatePresence>
                   {userMenuOpen && (
                     <motion.div 
@@ -196,7 +205,7 @@ export function Navbar() {
                         >
                           <div className="flex items-center space-x-3">
                             <LayoutDashboard className="w-4 h-4" />
-                            <span className="font-black text-[10px] uppercase tracking-widest">Neural Dashboard</span>
+                            <span className="font-black text-[10px] uppercase tracking-widest">Dashboard</span>
                           </div>
                           <motion.div whileHover={{ x: 3 }}><Zap className="w-3 h-3 opacity-0 group-hover:opacity-100" /></motion.div>
                         </button>
@@ -239,7 +248,7 @@ export function Navbar() {
 
           {/* --- MOBILE TRIGGER --- */}
           <button 
-            className="md:hidden p-4 rounded-2xl bg-white/5 border border-white/10 text-white z-[110]" 
+            className="md:hidden p-4 rounded-2xl bg-white/5 border border-white/10 text-white z-[110] relative" 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -247,64 +256,84 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* --- MOBILE OVERLAY --- */}
+      {/* --- MOBILE OVERLAY (FIXED POSITIONING) --- */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div 
-            initial={{ opacity: 0, scale: 1.1 }} 
-            animate={{ opacity: 1, scale: 1 }} 
-            exit={{ opacity: 0, scale: 1.1 }}
-            className="fixed inset-0 z-[100] md:hidden bg-[#02020a]/95 backdrop-blur-3xl p-10 flex flex-col justify-center items-center overflow-y-auto"
+            initial={{ opacity: 0, x: "100%" }} 
+            animate={{ opacity: 1, x: 0 }} 
+            exit={{ opacity: 0, x: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed top-0 left-0 w-full h-screen z-[105] md:hidden bg-[#02020a] flex flex-col overflow-hidden"
           >
-            <div className="flex flex-col space-y-8 text-center">
-              {navLinks.map((link, idx) => (
-                <motion.div
-                  key={link.path}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                >
-                  <Link 
-                    to={link.path} 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`block text-5xl font-black italic uppercase tracking-tighter ${
-                      isActive(link.path) ? "text-indigo-500" : "text-white/40 hover:text-white"
-                    }`}
-                  >
-                    {link.name}
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
+            {/* Background Glow */}
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/20 blur-[120px] rounded-full -z-10" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-fuchsia-600/10 blur-[120px] rounded-full -z-10" />
 
-            <div className="mt-20 w-full max-w-sm space-y-4">
-               {isAuthenticated ? (
-                 <div className="p-8 rounded-[2.5rem] bg-indigo-600/10 border border-indigo-500/20 text-center">
-                    <p className="text-[10px] font-black text-indigo-400 tracking-[0.5em] uppercase mb-3">Online Operator</p>
-                    <p className="text-3xl font-black italic text-white uppercase tracking-tighter truncate mb-6">
-                      {displayData.fullName}
-                    </p>
-                    <Button 
-                      onClick={() => { logout(); setMobileMenuOpen(false); navigate("/"); }} 
-                      className="w-full h-16 rounded-3xl bg-red-500/10 text-red-500 border border-red-500/20 font-black uppercase tracking-widest text-xs"
+            <div className="flex-1 flex flex-col justify-center items-center p-10 overflow-y-auto">
+              <div className="flex flex-col space-y-6 w-full text-center">
+                {navLinks.map((link, idx) => (
+                  <motion.div
+                    key={link.path}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                  >
+                    <Link 
+                      to={link.path} 
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center justify-center gap-4 text-4xl font-black italic uppercase tracking-tighter ${
+                        isActive(link.path) ? "text-indigo-500" : "text-white/40 hover:text-white"
+                      }`}
                     >
-                      Disconnect Identity
-                    </Button>
+                      <span className="opacity-50 scale-125">{link.icon}</span>
+                      {link.name}
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="mt-16 w-full max-w-sm space-y-4">
+                 {isAuthenticated ? (
+                   <div className="p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/10 text-center backdrop-blur-md">
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 mx-auto mb-4 p-[2px]">
+                        <div className="w-full h-full rounded-2xl bg-[#02020a] flex items-center justify-center font-black text-xl">
+                            {displayData.initials}
+                        </div>
+                      </div>
+                      <p className="text-2xl font-black italic text-white uppercase tracking-tighter truncate mb-6">
+                        {displayData.fullName}
+                      </p>
+                      <Button 
+                        onClick={() => { logout(); setMobileMenuOpen(false); navigate("/"); }} 
+                        className="w-full h-14 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 font-black uppercase tracking-widest text-[10px]"
+                      >
+                        Disconnect Identity
+                      </Button>
+                   </div>
+                 ) : (
+                   <Link to="/auth" className="block w-full" onClick={() => setMobileMenuOpen(false)}>
+                      <Button className="w-full h-16 rounded-3xl bg-indigo-600 text-white font-black uppercase italic tracking-[0.2em] shadow-2xl shadow-indigo-600/30">
+                        Initialize System
+                      </Button>
+                   </Link>
+                 )}
+                 
+                 <div className="flex justify-center gap-4 pt-4">
+                    <button 
+                      onClick={() => {toggleTheme(); setMobileMenuOpen(false);}}
+                      className="p-4 rounded-full bg-white/5 border border-white/10 text-indigo-400"
+                    >
+                      {isGlobalDark ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
+                    </button>
+                    <button 
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="p-4 rounded-full bg-white/5 border border-white/10 text-gray-400"
+                    >
+                      <X className="w-6 h-6" />
+                    </button>
                  </div>
-               ) : (
-                 <Link to="/auth" className="block w-full" onClick={() => setMobileMenuOpen(false)}>
-                    <Button className="w-full h-16 rounded-3xl bg-indigo-600 text-white font-black uppercase italic tracking-[0.2em] shadow-2xl shadow-indigo-600/30">
-                      Initialize System
-                    </Button>
-                 </Link>
-               )}
-               
-               <button 
-                 onClick={() => {toggleTheme(); setMobileMenuOpen(false);}}
-                 className="w-full py-6 text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 hover:text-white transition-colors"
-               >
-                 Switch to {isGlobalDark ? "Light Interface" : "Dark Interface"}
-               </button>
+              </div>
             </div>
           </motion.div>
         )}
