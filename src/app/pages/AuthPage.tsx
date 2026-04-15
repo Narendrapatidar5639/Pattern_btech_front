@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import { 
   Mail, Lock, User, Eye, EyeOff, Loader2, 
   ArrowLeft, Terminal, ShieldCheck, CheckCircle2, XCircle
@@ -27,7 +26,6 @@ export function AuthPage() {
     confirmPassword: "",
   });
 
-  const navigate = useNavigate();
   const { login } = useAuth();
   const API_BASE_URL = "https://narendrapatidarbtai-btech-backend.hf.space";
 
@@ -40,6 +38,26 @@ export function AuthPage() {
   };
 
   const isPasswordStrong = Object.values(passwordCriteria).every(Boolean);
+
+  /**
+   * REFRESH REDIRECT LOGIC
+   * Using window.location.href instead of navigate() forces the browser 
+   * to reload the entire app state at the new URL, ensuring the Navbar 
+   * pulls the fresh localStorage data.
+   */
+  const handleAuthSuccess = (userData: any, token: string) => {
+    // 1. Sync Context
+    login(token || "session_active", JSON.stringify(userData));
+    // 2. Sync LocalStorage
+    localStorage.setItem("user", JSON.stringify(userData));
+    
+    toast.success(`Access Initialized: Welcome ${userData.full_name}`);
+    
+    // 3. Force Refresh Redirect
+    setTimeout(() => {
+        window.location.href = "/selection"; 
+    }, 500);
+  };
 
   // --- Google Auth Sync ---
   const handleGoogleAuth = async () => {
@@ -67,11 +85,7 @@ export function AuthPage() {
             email: data.user.email,
             avatar: user.photoURL
         };
-        login(data.token || "session_active", JSON.stringify(userData));
-        localStorage.setItem("user", JSON.stringify(userData));
-        
-        toast.success(`Access Initialized: Welcome ${userData.full_name}`);
-        navigate("/selection");
+        handleAuthSuccess(userData, data.token);
       } else {
         toast.error(data.error || "Neural sync failed.");
       }
@@ -119,11 +133,7 @@ export function AuthPage() {
           setIsForgotPassword(false);
         } else {
           const userData = data.user || { full_name: formData.name, email: formData.email };
-          login(data.token || "session_active", JSON.stringify(userData));
-          localStorage.setItem("user", JSON.stringify(userData));
-          
-          toast.success(isLogin ? `Identity Verified: ${userData.full_name}` : `Identity Created: ${userData.full_name}`);
-          navigate("/selection");
+          handleAuthSuccess(userData, data.token);
         }
       } else {
         toast.error(data.error || "Authentication Protocol Failed.");
@@ -147,7 +157,7 @@ export function AuthPage() {
 
       <div className="relative z-10 max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
         
-        {/* --- ADJUSTED: Brand & Visuals (Visible on all screens now) --- */}
+        {/* Left Side: Brand Visuals */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }} 
           animate={{ opacity: 1, y: 0 }} 
