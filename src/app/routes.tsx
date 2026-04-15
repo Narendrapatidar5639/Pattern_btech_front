@@ -2,7 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { RootLayout } from "./components/layouts/RootLayout";
 import { AdminLayout } from "./components/layouts/AdminLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute"; // Auth guard import
-
+import { ThemeProvider } from "./contexts/ThemeProvider";
 // Pages Imports
 import { HomePage } from "./pages/HomePage";
 import { AuthPage } from "./pages/AuthPage";
@@ -36,22 +36,30 @@ export const router = createBrowserRouter([
     ],
   },
   // router.js
+// router.tsx
 {
-  path: "/admin",
-  Component: AdminLayout,
-  children: [
-    { index: true, Component: AdminAuthPage }, 
-    {
-      // Use 'element' for the wrapper and 'children' for nested routes
-      element: <ProtectedRoute />, 
-      children: [
-        { path: "dashboard", Component: AdminDashboard }, // This is /admin/dashboard
-        { path: "upload", Component: AdminUploadPage },
-        { path: "reports", Component: AdminReportsPage },
-      ],
-    },
-  ],
-},
+    path: "/admin",
+    // We wrap the whole admin section in the correct ThemeProvider here
+    element: (
+      <ThemeProvider>
+        <AdminLayout />
+      </ThemeProvider>
+    ),
+    children: [
+      // /admin -> This is the Login Page
+      { index: true, Component: AdminAuthPage },
+      
+      // These are locked behind the login
+      {
+        element: <ProtectedRoute />, 
+        children: [
+          { path: "dashboard", Component: AdminDashboard },
+          { path: "upload", Component: AdminUploadPage },
+          { path: "reports", Component: AdminReportsPage },
+        ],
+      },
+    ],
+  },
   {
     path: "*",
     Component: NotFound,

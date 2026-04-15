@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom"; 
 import { motion, AnimatePresence } from "framer-motion";
+
 import { 
   LayoutDashboard, Upload, FileText, LogOut, 
   Menu, ChevronRight, Sun, Moon, Monitor
