@@ -1,14 +1,12 @@
 import { Navigate, Outlet } from "react-router-dom";
 
 export function ProtectedRoute() {
-  // Check kijiye local storage mein login data hai ya nahi
-  const isAdminAuthenticated = localStorage.getItem("adminToken"); 
+  const isAdmin = localStorage.getItem("isAdmin") === "true";
 
-  if (!isAdminAuthenticated) {
-    // Agar token nahi hai, toh login page par bhej do
-    return <Navigate to="/admin" replace />;
+  if (!isAdmin) {
+    // If not admin, send them back to login
+    return <Navigate replace to="/admin" />;
   }
 
-  // Agar authenticated hai, toh page dikhao
   return <Outlet />;
 }

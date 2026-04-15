@@ -35,24 +35,23 @@ export const router = createBrowserRouter([
       { path: "contact", Component: ContactPage },
     ],
   },
-  {
-    path: "/admin",
-    Component: AdminLayout,
-    children: [
-      // 1. Admin Login Page (Ye hamesha accessible rahega)
-      { index: true, Component: AdminAuthPage },
-      
-      // 2. Protected Admin Routes (Inke liye login zaroori hai)
-      {
-        element: <ProtectedRoute />, 
-        children: [
-          { path: "dashboard", Component: AdminDashboard },
-          { path: "upload", Component: AdminUploadPage },
-          { path: "reports", Component: AdminReportsPage },
-        ],
-      },
-    ],
-  },
+  // router.js
+{
+  path: "/admin",
+  Component: AdminLayout,
+  children: [
+    { index: true, Component: AdminAuthPage }, 
+    {
+      // Use 'element' for the wrapper and 'children' for nested routes
+      element: <ProtectedRoute />, 
+      children: [
+        { path: "dashboard", Component: AdminDashboard }, // This is /admin/dashboard
+        { path: "upload", Component: AdminUploadPage },
+        { path: "reports", Component: AdminReportsPage },
+      ],
+    },
+  ],
+},
   {
     path: "*",
     Component: NotFound,
