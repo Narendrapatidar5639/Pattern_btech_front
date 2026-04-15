@@ -37,14 +37,19 @@ export function AdminAuthPage() {
 
       const result = await response.json();
 
-      if (response.ok) {
-        toast.success("Access Granted: Welcome, Admin.");
-        localStorage.setItem("isAdmin", "true");
-        localStorage.setItem("adminUser", result.user || "Admin");
-        
-        // Dashboard par navigate karein
-        navigate("/admin/dashboard");
-      } else {
+      // Inside handleSubmit
+if (response.ok) {
+  localStorage.setItem("isAdmin", "true");
+  localStorage.setItem("adminUser", result.user || "Admin");
+  
+  toast.success("Access Granted");
+
+  // Add a slight delay or use replace: true to ensure 
+  // storage is written before the Route Guard checks it
+  setTimeout(() => {
+    navigate("/admin/dashboard", { replace: true });
+  }, 100);
+} else {
         toast.error(result.error || "Authentication Failed: Invalid Credentials");
       }
     } catch (error) {
