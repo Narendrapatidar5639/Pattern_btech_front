@@ -1,21 +1,30 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useOutletContext } from "react-router"; // Layout se theme lene ke liye
-import { Upload, File as FileIcon, X, CheckCircle, PlusCircle, Database, Layout } from "lucide-react";
+import { useOutletContext } from "react-router";
+import { 
+  Upload, File as FileIcon, X, CheckCircle, 
+  PlusCircle, Database, Layout, Loader2 
+} from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Label } from "../../components/ui/label";
 import { GlassCard } from "../../components/GlassCard";
 import { Progress } from "../../components/ui/progress";
 import { toast } from "sonner";
 
+// Interfaces
 interface DropdownItem {
   id: number;
   name: string;
 }
 
+interface ContextType {
+  theme: 'light' | 'dark';
+}
+
 export function AdminUploadPage() {
-  // Layout se theme access kar rahe hain
-  const { theme } = useOutletContext<{ theme: 'light' | 'dark' }>();
+  // FIX: Safe context destructuring with fallback
+  const context = useOutletContext<ContextType>() || { theme: 'dark' };
+  const { theme } = context;
   const isDark = theme === 'dark';
 
   const [formData, setFormData] = useState({ university: "", course: "", semester: "", subject: "" });
@@ -30,10 +39,11 @@ export function AdminUploadPage() {
 
   const semesters = ["1", "2", "3", "4", "5", "6", "7", "8"];
 
-  // API Logic (Same as before)
+  // Fetch Initial Metadata
   const fetchMetadata = async () => {
-    try {//const API_BASE_URL = "https://pattern-btech-backend.onrender.com/api";
+    try {
       const response = await fetch("https://narendrapatidarbtai-btech-backend.hf.space/api/selection-metadata/");
+      if (!response.ok) throw new Error("Metadata fetch failed");
       const data = await response.json();
       setUniversities(data.universities || []);
       setCourses(data.branches || []);
@@ -42,18 +52,27 @@ export function AdminUploadPage() {
     }
   };
 
-  useEffect(() => { fetchMetadata(); }, []);
+  useEffect(() => { 
+    fetchMetadata(); 
+  }, []);
 
+  // Fetch Subjects based on Course and Semester
   useEffect(() => {
-    if (formData.course && formData.semester) {//const API_BASE_URL = "https://pattern-btech-backend.onrender.com/api";
+    if (formData.course && formData.semester) {
       fetch(`https://narendrapatidarbtai-btech-backend.hf.space/api/get-subjects/?branch=${formData.course}&semester=${formData.semester}`)
         .then(res => res.json())
-        .then(data => setSubjects(data));
+        .then(data => setSubjects(data))
+        .catch(() => toast.error("Failed to load subjects for this vector"));
+    } else {
+      setSubjects([]);
     }
   }, [formData.course, formData.semester]);
 
   const handleCreateNew = async () => {
-    if (!showAddNew?.value) return;
+    if (!showAddNew?.value) {
+      toast.error("Label cannot be empty");
+      return;
+    }
     try {
       const response = await fetch("https://narendrapatidarbtai-btech-backend.hf.space/api/admin/create-metadata/", {
         method: "POST",
@@ -69,17 +88,27 @@ export function AdminUploadPage() {
         toast.success(`Database updated: ${showAddNew.type} added.`);
         await fetchMetadata();
         setShowAddNew(null);
+      } else {
+        toast.error("Server rejected the new entry");
       }
-    } catch (error) { toast.error("Database Write Failed"); }
+    } catch (error) { 
+      toast.error("Database Write Failed"); 
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.university || !formData.course || !formData.semester || !formData.subject) {
-      toast.error("Please provide full neural mapping (fill all fields)"); return;
+      toast.error("Full neural mapping required (fill all fields)"); 
+      return;
     }
+    if (selectedFiles.length === 0) {
+      toast.error("No source datasets (PDFs) selected");
+      return;
+    }
+
     setIsUploading(true);
-    setUploadProgress(20);
+    setUploadProgress(10);
     
     const data = new FormData();
     data.append("university", formData.university);
@@ -89,26 +118,46 @@ export function AdminUploadPage() {
     selectedFiles.forEach(f => data.append("files", f));
 
     try {
-      const res = await fetch("https://narendrapatidarbtai-btech-backend.hf.space/api/admin/upload/", { method: "POST", body: data });
+      // Simulated progress for better UX
+      const interval = setInterval(() => {
+        setUploadProgress(prev => (prev < 90 ? prev + 5 : prev));
+      }, 300);
+
+      const res = await fetch("https://narendrapatidarbtai-btech-backend.hf.space/api/admin/upload/", { 
+        method: "POST", 
+        body: data 
+      });
+
+      clearInterval(interval);
+
       if (res.ok) {
         setUploadProgress(100);
         toast.success("Dataset published to PatternBTech Cloud!");
         setSelectedFiles([]);
         setFormData({ ...formData, subject: "" });
         if (fileInputRef.current) fileInputRef.current.value = "";
+      } else {
+        throw new Error("Upload failed");
       }
-    } catch (err) { toast.error("Transmission Interrupted"); }
-    finally { setTimeout(() => { setIsUploading(false); setUploadProgress(0); }, 1500); }
+    } catch (err) { 
+      toast.error("Transmission Interrupted: Check Server Status"); 
+    }
+    finally { 
+      setTimeout(() => { 
+        setIsUploading(false); 
+        setUploadProgress(0); 
+      }, 1500); 
+    }
   };
 
-  // --- DYNAMIC STYLES BASED ON THEME ---
+  // --- Dynamic Styles ---
   const selectClassName = `w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 appearance-none cursor-pointer transition-all font-bold text-sm ${
     isDark 
     ? "bg-white/5 border-white/10 text-white focus:border-indigo-500" 
     : "bg-slate-100 border-slate-200 text-slate-800 focus:border-indigo-600"
   }`;
 
-  const optionClassName = isDark ? "bg-[#1a1a2e] text-white" : "bg-white text-slate-900";
+  const optionClassName = isDark ? "bg-[#0f172a] text-white" : "bg-white text-slate-900";
 
   return (
     <div className="relative min-h-[85vh]">
@@ -126,11 +175,11 @@ export function AdminUploadPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
         <div className="lg:col-span-2">
-          <GlassCard className={`p-8 border ${isDark ? 'border-white/5 shadow-2xl' : 'border-slate-200 shadow-xl shadow-slate-200/50'}`}>
+          <GlassCard className={`p-8 border ${isDark ? 'border-white/5 shadow-2xl bg-white/[0.02]' : 'border-slate-200 shadow-xl shadow-slate-200/50 bg-white'}`}>
             <form onSubmit={handleSubmit} className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 
-                {/* Reusable Select Field Logic */}
+                {/* target university & branch */}
                 {[
                   { label: "Target University", key: "university", data: universities, type: "university" },
                   { label: "Branch Vector", key: "course", data: courses, type: "branch" },
@@ -181,8 +230,16 @@ export function AdminUploadPage() {
                 <div className={`border-2 border-dashed p-12 rounded-3xl text-center transition-all group relative overflow-hidden ${
                   isDark ? 'border-white/10 bg-white/[0.02] hover:border-indigo-500/50' : 'border-slate-200 bg-slate-50 hover:border-indigo-400'
                 }`}>
-                  <input type="file" ref={fileInputRef} multiple accept=".pdf" onChange={e => e.target.files && setSelectedFiles(Array.from(e.target.files))} className="hidden" id="file-up" />
-                  <label htmlFor="file-up" className="cursor-pointer relative z-10">
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    multiple 
+                    accept=".pdf" 
+                    onChange={e => e.target.files && setSelectedFiles(Array.from(e.target.files))} 
+                    className="hidden" 
+                    id="file-up" 
+                  />
+                  <label htmlFor="file-up" className="cursor-pointer relative z-10 block">
                     <div className="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                       <Upload className="w-8 h-8 text-indigo-600" />
                     </div>
@@ -203,7 +260,7 @@ export function AdminUploadPage() {
                         }`}>
                           <FileIcon className="w-3 h-3 text-indigo-500" />
                           <span className="truncate max-w-[120px]">{f.name}</span>
-                          <X className="w-3 h-3 cursor-pointer hover:text-rose-500" onClick={() => setSelectedFiles(prev => prev.filter((_, idx) => idx !== i))} />
+                          <X className="w-3 h-3 cursor-pointer hover:text-rose-500 transition-colors" onClick={() => setSelectedFiles(prev => prev.filter((_, idx) => idx !== i))} />
                         </div>
                       ))}
                     </div>
@@ -221,8 +278,16 @@ export function AdminUploadPage() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full h-16 text-xs font-black uppercase tracking-[0.3em] bg-indigo-600 hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 rounded-2xl transition-all active:scale-95" disabled={isUploading}>
-                {isUploading ? "Neural Transmission in Progress..." : "Finalize & Publish"}
+              <Button 
+                type="submit" 
+                className="w-full h-16 text-xs font-black uppercase tracking-[0.3em] bg-indigo-600 hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 rounded-2xl transition-all active:scale-95" 
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Transmission in Progress...
+                  </div>
+                ) : "Finalize & Publish"}
               </Button>
             </form>
           </GlassCard>
@@ -230,7 +295,7 @@ export function AdminUploadPage() {
 
         {/* Sidebar Status Card */}
         <div className="space-y-6">
-            <GlassCard className={`p-6 border-l-4 border-indigo-500 ${isDark ? 'bg-indigo-500/5 border-white/5' : 'bg-white border-slate-200'}`}>
+            <GlassCard className={`p-6 border-l-4 border-indigo-500 ${isDark ? 'bg-indigo-500/5 border-white/5 shadow-xl' : 'bg-white border-slate-200 shadow-lg'}`}>
               <h3 className={`font-black uppercase tracking-widest text-[11px] mb-4 flex items-center ${isDark ? 'text-white' : 'text-slate-800'}`}>
                 <CheckCircle className="w-4 h-4 mr-2 text-indigo-500" /> Upload Protocol
               </h3>
@@ -254,7 +319,7 @@ export function AdminUploadPage() {
         {showAddNew && (
           <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[100] flex items-center justify-center p-6">
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="w-full max-w-md">
-              <GlassCard className={`p-10 border shadow-2xl ${isDark ? 'border-indigo-500/30' : 'bg-white border-slate-200'}`}>
+              <GlassCard className={`p-10 border shadow-2xl ${isDark ? 'border-indigo-500/30 bg-[#0a0a1a]' : 'bg-white border-slate-200'}`}>
                 <h2 className={`text-2xl font-black uppercase italic tracking-tighter mb-6 flex items-center ${isDark ? 'text-white' : 'text-slate-900'}`}>
                   <PlusCircle className="mr-3 text-indigo-500 w-6 h-6" /> New <span className="ml-2 text-indigo-500">{showAddNew.type}</span>
                 </h2>
@@ -272,7 +337,7 @@ export function AdminUploadPage() {
                     />
                 </div>
                 <div className="flex gap-4 mt-10">
-                  <Button onClick={() => setShowAddNew(null)} className={`flex-1 h-12 text-[10px] font-black uppercase tracking-widest rounded-xl ${isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}>Abort</Button>
+                  <Button variant="ghost" onClick={() => setShowAddNew(null)} className={`flex-1 h-12 text-[10px] font-black uppercase tracking-widest rounded-xl ${isDark ? 'hover:bg-white/5 text-gray-400' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Abort</Button>
                   <Button onClick={handleCreateNew} className="flex-1 h-12 bg-indigo-600 hover:bg-indigo-700 text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-indigo-500/20">Sync to DB</Button>
                 </div>
               </GlassCard>

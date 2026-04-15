@@ -25,8 +25,14 @@ interface UploadedPaper {
   url: string;
 }
 
+interface ContextType {
+  theme: 'light' | 'dark';
+}
+
 export function AdminReportsPage() {
-  const { theme } = useOutletContext<{ theme: 'light' | 'dark' }>();
+  // FIX: Safe context destructuring with fallback to prevent crash
+  const context = useOutletContext<ContextType>() || { theme: 'dark' };
+  const { theme } = context;
   const isDark = theme === 'dark';
 
   const [reports, setReports] = useState<Report[]>([]);
@@ -35,18 +41,18 @@ export function AdminReportsPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
-    try {//const API_BASE_URL = "https://pattern-btech-backend.onrender.com/api";
+    try {
       const response = await fetch("https://narendrapatidarbtai-btech-backend.hf.space/api/admin/reports/");
+      if (!response.ok) throw new Error("Sync failure");
       const data = await response.json();
-      if (response.ok) {
-        setReports(data.reports);
-        setUploadedPapers(data.uploadedPapers);
-        setStats({
-          totalReports: data.stats.totalReports.toString(),
-          totalPapers: data.stats.totalPapers.toString(),
-          thisMonth: data.stats.thisMonth.toString(),
-        });
-      }
+      
+      setReports(data.reports || []);
+      setUploadedPapers(data.uploadedPapers || []);
+      setStats({
+        totalReports: (data.stats?.totalReports || 0).toString(),
+        totalPapers: (data.stats?.totalPapers || 0).toString(),
+        thisMonth: (data.stats?.thisMonth || 0).toString(),
+      });
     } catch (error) {
       toast.error("Cloud synchronization failed");
     } finally {
@@ -54,7 +60,9 @@ export function AdminReportsPage() {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { 
+    fetchData(); 
+  }, []);
 
   const handleDownload = (url: string, title: string) => {
     window.open(url, "_blank");
@@ -64,16 +72,22 @@ export function AdminReportsPage() {
   const getStatusStyle = (status: string) => {
     const isCompleted = status.toLowerCase() === "completed";
     if (isDark) {
-      return isCompleted ? "text-green-400 bg-green-400/10 border-green-500/20" : "text-yellow-400 bg-yellow-400/10 border-yellow-500/20";
+      return isCompleted 
+        ? "text-green-400 bg-green-400/10 border-green-500/20" 
+        : "text-yellow-400 bg-yellow-400/10 border-yellow-500/20";
     }
-    return isCompleted ? "text-green-700 bg-green-100 border-green-200" : "text-yellow-700 bg-yellow-100 border-yellow-200";
+    return isCompleted 
+      ? "text-green-700 bg-green-100 border-green-200" 
+      : "text-yellow-700 bg-yellow-100 border-yellow-200";
   };
 
   if (loading) {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-12 h-12 animate-spin text-indigo-500" />
-        <p className={`text-xs font-black uppercase tracking-[0.3em] ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>Loading Neural Data...</p>
+        <p className={`text-xs font-black uppercase tracking-[0.3em] ${isDark ? 'text-gray-500' : 'text-slate-400'}`}>
+          Loading Neural Data...
+        </p>
       </div>
     );
   }
@@ -120,10 +134,10 @@ export function AdminReportsPage() {
       {/* Reports List */}
       <div className="grid grid-cols-1 gap-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <GlassCard className={`p-8 border ${isDark ? 'border-white/5' : 'border-slate-200 bg-white shadow-xl'}`}>
+          <GlassCard className={`p-8 border ${isDark ? 'border-white/5 bg-white/[0.02]' : 'border-slate-200 bg-white shadow-xl'}`}>
             <h2 className={`text-xl font-black uppercase italic tracking-tighter mb-8 ${isDark ? 'text-white' : 'text-slate-900'}`}>Generated Analysis Reports</h2>
             <div className="space-y-4">
-              {reports.map((report, index) => (
+              {reports.length > 0 ? reports.map((report, index) => (
                 <motion.div key={report.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + index * 0.05 }}
                   className={`p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 group ${
                     isDark ? 'bg-white/[0.02] border-white/5 hover:bg-white/[0.05]' : 'bg-slate-50 border-slate-100 hover:bg-slate-100/50'
@@ -152,16 +166,18 @@ export function AdminReportsPage() {
                     </Button>
                   </div>
                 </motion.div>
-              ))}
+              )) : (
+                <p className="text-center py-10 text-xs font-bold uppercase tracking-widest text-gray-500">No reports indexed in cloud.</p>
+              )}
             </div>
           </GlassCard>
         </motion.div>
 
         {/* Papers Table */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-          <GlassCard className={`p-8 border overflow-hidden ${isDark ? 'border-white/5' : 'border-slate-200 bg-white shadow-xl'}`}>
+          <GlassCard className={`p-8 border overflow-hidden ${isDark ? 'border-white/5 bg-white/[0.02]' : 'border-slate-200 bg-white shadow-xl'}`}>
             <h2 className={`text-xl font-black uppercase italic tracking-tighter mb-8 ${isDark ? 'text-white' : 'text-slate-900'}`}>Recent Dataset Ingestion</h2>
-            <div className="overflow-x-auto overflow-hidden rounded-2xl border border-transparent">
+            <div className="overflow-x-auto rounded-2xl border border-transparent">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className={`text-[10px] font-black uppercase tracking-[0.2em] ${isDark ? 'bg-white/5 text-gray-500' : 'bg-slate-50 text-slate-400'}`}>
@@ -171,7 +187,7 @@ export function AdminReportsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-transparent">
-                  {uploadedPapers.map((paper) => (
+                  {uploadedPapers.length > 0 ? uploadedPapers.map((paper) => (
                     <tr key={paper.id} className={`transition-colors border-b ${isDark ? 'border-white/5 hover:bg-white/[0.02]' : 'border-slate-100 hover:bg-slate-50'}`}>
                       <td className={`py-5 px-6 text-sm font-bold ${isDark ? 'text-gray-200' : 'text-slate-700'}`}>{paper.name}</td>
                       <td className="py-5 px-6">
@@ -188,7 +204,13 @@ export function AdminReportsPage() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan={3} className="py-10 text-center text-xs font-bold uppercase tracking-widest text-gray-500">
+                        Repository is currently empty.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
