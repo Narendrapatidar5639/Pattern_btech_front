@@ -26,8 +26,14 @@ interface ActivityItem {
   status: string;
 }
 
+interface ContextType {
+  theme: 'light' | 'dark';
+}
+
 export function AdminDashboard() {
-  const { theme } = useOutletContext<{ theme: 'light' | 'dark' }>();
+  // FIX: Provide a fallback object to prevent destructuring error if context is undefined
+  const context = useOutletContext<ContextType>() || { theme: 'dark' };
+  const { theme } = context;
   const isDark = theme === 'dark';
 
   const [statsData, setStatsData] = useState<DashboardStats | null>(null);
@@ -37,15 +43,15 @@ export function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      //const API_BASE_URL = "https://pattern-btech-backend.onrender.com/api";
       const response = await fetch("https://narendrapatidarbtai-btech-backend.hf.space/api/admin/dashboard-stats/");
+      if (!response.ok) throw new Error("Network response was not ok");
+      
       const data = await response.json();
-      if (response.ok) {
-        setStatsData(data.stats);
-        setActivities(data.recentActivity || []);
-      }
+      setStatsData(data.stats);
+      setActivities(data.recentActivity || []);
     } catch (error) {
-      toast.error("Neural Sync Interrupted");
+      console.error("Fetch error:", error);
+      toast.error("Neural Sync Interrupted: Check Connectivity");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -54,7 +60,7 @@ export function AdminDashboard() {
 
   useEffect(() => {
     fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 30000); // Updated to 30s for live feel
+    const interval = setInterval(fetchDashboardData, 30000); 
     return () => clearInterval(interval);
   }, []);
 
@@ -156,7 +162,6 @@ export function AdminDashboard() {
               <GlassCard className={`p-8 border-2 transition-all group relative overflow-hidden rounded-[2.5rem] ${
                 isDark ? 'border-white/5 hover:border-white/20 bg-white/[0.02]' : 'bg-white border-slate-100 shadow-xl shadow-slate-200/40 hover:border-indigo-200'
               }`}>
-                {/* Visual Glow */}
                 <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full blur-3xl opacity-0 group-hover:opacity-20 transition-opacity bg-gradient-to-br ${stat.color}`} />
                 
                 <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${stat.color} flex items-center justify-center mb-8 shadow-2xl ${stat.glow} group-hover:scale-110 group-hover:rotate-6 transition-all duration-500`}>
@@ -234,13 +239,13 @@ export function AdminDashboard() {
                           </div>
                         </td>
                         <td className={`px-10 py-7 text-sm font-bold tracking-tight ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>
-                           <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2">
                               <FileText className="w-4 h-4 text-indigo-500/50" />
                               {item.subject}
-                           </div>
+                            </div>
                         </td>
                         <td className={`px-10 py-7 text-xs font-black uppercase tracking-widest ${isDark ? 'text-gray-600' : 'text-slate-400'}`}>
-                           {item.time}
+                            {item.time}
                         </td>
                         <td className="px-10 py-7 text-right">
                           <span className={`inline-flex items-center gap-3 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-tighter border-2 ${ui.color}`}>
@@ -254,7 +259,7 @@ export function AdminDashboard() {
               </table>
             </div>
 
-            {/* Mobile View - Enhanced Cards */}
+            {/* Mobile View */}
             <div className="md:hidden divide-y divide-white/5">
               {activities.map((item, idx) => (
                 <div key={idx} className="p-8 space-y-6">
@@ -277,7 +282,7 @@ export function AdminDashboard() {
           </GlassCard>
         </motion.section>
 
-        {/* Global Hardware Matrix Footer */}
+        {/* Footer */}
         <footer className={`pt-12 border-t-2 grid grid-cols-1 lg:grid-cols-3 gap-8 items-center ${isDark ? 'border-white/5' : 'border-slate-100'}`}>
             <div className="flex gap-10">
                <div className="space-y-1">
