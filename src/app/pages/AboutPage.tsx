@@ -113,7 +113,7 @@ export function AboutPage() {
       
       {/* Image with Padding and Top Alignment */}
       <img 
-        src="/file_00000000bf7c72099776d8d86f42953e.jpeg" 
+        src="/file_00000000bf7c72099776d8d86f42953e.png" 
         alt="Narendra Patidar"
         className="w-full h-full object-contain p-4 lg:p-8 object-top transform group-hover:scale-102 transition-transform duration-1000 ease-out"
       />
