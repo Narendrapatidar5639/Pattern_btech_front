@@ -224,7 +224,7 @@ export function HomePage() {
             <img 
               src="/file_00000000bf7c72099776d8d86f42953e.png" 
               alt="Architect Narendra Patidar" 
-              className="w-full h-full object-contain bg-[#030310] scale-150 group-hover:scale-100 transition-transform duration-700 ease-out" 
+              className="w-full h-full object-contain bg-[#030310] scale-120 group-hover:scale-100 transition-transform duration-700 ease-out" 
             />
           </div>
         </div>
