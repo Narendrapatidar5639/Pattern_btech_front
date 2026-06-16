@@ -222,7 +222,7 @@ export function HomePage() {
           <div className={`relative rounded-[3rem] overflow-hidden border-8 ${isDark ? 'border-white/5' : 'border-white'} aspect-[4/5] shadow-2xl`}>
             {/* FIXED: object-contain head portion ko cut hone se rokega, pure picture ko dikhayega */}
             <img 
-              src="/file_00000000bf7c72099776d8d86f42953e.jpeg" 
+              src="/file_00000000bf7c72099776d8d86f42953e.png" 
               alt="Architect Narendra Patidar" 
               className="w-full h-full object-contain bg-[#030310] scale-150 group-hover:scale-100 transition-transform duration-700 ease-out" 
             />
