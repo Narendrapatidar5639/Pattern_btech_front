@@ -9,22 +9,23 @@ import {
 import { Button } from "../components/ui/button";
 import { GlassCard } from "../components/GlassCard";
 import { toast } from "sonner";
-import { useAuth } from "../contexts/AuthContext"; // Auth context import kiya
+import { useAuth } from "../contexts/AuthContext";
 
+// INTERFACE CRITICAL FIX: Add download_url variable coming from backend
 interface Paper {
   id: number;
   display_name: string; 
   pdf_file: string;
+  download_url?: string; // Naya pipeline link
 }
 
 const API_BASE_URL = "https://narendrapatidarbtai-btech-backend.hf.space/api";
-const MEDIA_BASE_URL = "https://narendrapatidarbtai-btech-backend.hf.space/media/";
 
 export function PapersPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const selectionData = location.state || {};
-  const { user } = useAuth(); // Logged in user ki details lene ke liye
+  const { user } = useAuth();
   
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,37 +73,36 @@ export function PapersPage() {
     fetchPapers();
   }, [selectionData, navigate]);
 
-  const getFullFileUrl = (filePath: string) => filePath.startsWith('http') ? filePath : `${MEDIA_BASE_URL}${filePath}`;
+  // SAFE DOWNLOAD SYSTEM: Agat backend download_url nahi bhejta toh automatic standard fallback framework link banayega
+  const getSecureDownloadUrl = (paper: Paper) => {
+    if (paper.download_url) return paper.download_url;
+    return `https://narendrapatidarbtai-btech-backend.hf.space/api/admin/download-paper/${paper.id}/`;
+  };
 
   const togglePaperSelection = (paperId: number) => {
     setSelectedPapers((prev) => prev.includes(paperId) ? prev.filter((id) => id !== paperId) : [...prev, paperId]);
   };
 
-  // --- NEW LOGIC: SEND DATA TO BACKEND BEFORE ANALYSIS ---
+  // --- ACTION LOG ANALYSIS SYSTEM ---
   const handleStartAnalysis = async () => {
     if (selectedPapers.length === 0) return toast.error("Select papers first");
 
-    // 1. User details extract karein (Navbar wali logic use ki hai)
     const localUser = JSON.parse(localStorage.getItem("user") || "{}");
     const currentUser = user || localUser;
     const userName = currentUser?.full_name || currentUser?.displayName || "Neural User";
 
-    // 2. Data object taiyar karein jo Admin side ko chahiye
     const analysisPayload = {
       user_name: userName,
       subject_name: selectionData.subjectName || "Unknown Subject",
       semester: selectionData.semester,
       paper_count: selectedPapers.length,
-      timestamp: new Date().toLocaleTimeString(), // Backend ko time bhejne ke liye
+      timestamp: new Date().toLocaleTimeString(),
       status: "Processing"
     };
 
     try {
-      // Toast dikhayein ki engine start ho raha hai
       toast.loading("Initializing Neural Engine...", { id: "analysis-load" });
 
-      // 3. Backend API call (Admin Activity record karne ke liye)
-      // Note: Is endpoint ko aapne backend mein handle karna hai
       const logResponse = await fetch(`${API_BASE_URL}/admin/activity-log/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -113,24 +113,21 @@ export function PapersPage() {
         toast.success("Identity Verified. Analysis Started.", { id: "analysis-load" });
       }
 
-      // 4. Sab sahi hone par dashboard par bhej dein
       navigate("/dashboard", { 
         state: { 
           ...selectionData, 
           selectedPaperIds: selectedPapers,
-          userName: userName // Dashboard ko bhi user name bhej rahe hain
+          userName: userName 
         } 
       });
 
     } catch (error) {
       console.error("Sync Error:", error);
-      // Agar backend sync fail bhi ho jaye, tab bhi user ko analysis dikhna chahiye
       toast.dismiss("analysis-load");
       navigate("/dashboard", { state: { ...selectionData, selectedPaperIds: selectedPapers } });
     }
   };
 
-  // --- LOADING UI (RETAINED AS PER YOUR REQUEST) ---
   if (loading) {
     return (
       <div className={`min-h-screen flex flex-col items-center justify-center transition-colors duration-700 ${isDarkMode ? 'bg-[#02020a]' : 'bg-gray-50'}`}>
@@ -161,7 +158,6 @@ export function PapersPage() {
 
   return (
     <div className={`relative min-h-screen transition-colors duration-700 overflow-x-hidden ${isDarkMode ? 'bg-[#02020a] text-white' : 'bg-white text-slate-900'}`}>
-      {/* Background Gradients */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className={`absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] ${isDarkMode ? 'bg-indigo-600/10' : 'bg-indigo-200/30'}`} />
       </div>
@@ -205,8 +201,9 @@ export function PapersPage() {
                 </div>
                 <h3 className={`text-2xl font-black uppercase italic tracking-tight leading-[1.1] mb-12 min-h-[5rem] ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{paper.display_name}</h3>
                 <div className="flex gap-4">
-                  <Button variant="secondary" className="flex-1 h-12 rounded-xl text-[10px] font-black uppercase" onClick={(e) => { e.stopPropagation(); window.open(getFullFileUrl(paper.pdf_file), "_blank"); }}>View</Button>
-                  <Button variant="secondary" className="flex-1 h-12 rounded-xl text-[10px] font-black uppercase" onClick={(e) => { e.stopPropagation(); window.open(getFullFileUrl(paper.pdf_file), "_blank"); }}>PDF</Button>
+                  {/* CRITICAL BUTTON FIXES: Uses getSecureDownloadUrl to bypass Hugging Face temporary disk issues */}
+                  <Button variant="secondary" className="flex-1 h-12 rounded-xl text-[10px] font-black uppercase" onClick={(e) => { e.stopPropagation(); window.open(getSecureDownloadUrl(paper), "_blank"); }}>View</Button>
+                  <Button variant="secondary" className="flex-1 h-12 rounded-xl text-[10px] font-black uppercase" onClick={(e) => { e.stopPropagation(); window.open(getSecureDownloadUrl(paper), "_blank"); }}>Download</Button>
                 </div>
               </GlassCard>
             </motion.div>

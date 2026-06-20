@@ -38,15 +38,18 @@ export const router = createBrowserRouter([
   },
   {
     path: "/admin",
-    element: (
-      <ThemeProvider>
-        <AdminLayout />
-      </ThemeProvider>
-    ),
+    // Yaha se AdminLayout hata diya hai kyunki niche index (login) ke liye layout nahi chahiye hoga
     children: [
-      { index: true, Component: AdminAuthPage },
+      { index: true, Component: AdminAuthPage }, // /admin par login page
       {
-        element: <ProtectedRoute />, 
+        // Ab ProtectedRoute ke andar Theme aur Layout dono ko wrap kiya hai
+        element: (
+          <ProtectedRoute>
+            <ThemeProvider>
+              <AdminLayout />
+            </ThemeProvider>
+          </ProtectedRoute>
+        ),
         children: [
           { path: "dashboard", Component: AdminDashboard },
           { path: "upload", Component: AdminUploadPage },
