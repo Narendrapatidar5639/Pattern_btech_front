@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, type FormEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -17,8 +17,6 @@ import { Label } from "../components/ui/label";
 import { GlassCard } from "../components/GlassCard";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
-// Assuming you have a theme context, if not, it will default to dark logic
-// import { useTheme } from "../contexts/ThemeContext";
 
 const API_BASE_URL = "https://narendrapatidarbtai-btech-backend.hf.space/api";
 
@@ -56,17 +54,15 @@ export function SelectionPage() {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const response = await fetch("https://narendrapatidarbtai-btech-backend.hf.space/api/selection-metadata/", {
+        const response = await fetch(`${API_BASE_URL}/selection-metadata/`, {
           method: "GET",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" }
         });
         if (!response.ok) throw new Error("Failed to fetch initial data");
         const data = await response.json();
-        setOptions(prev => ({
+        setOptions((prev) => ({
           ...prev,
           universities: data.universities || [],
-          branches: data.branches || []
+          branches: data.branches || [],
         }));
       } catch (error) {
         toast.error("Failed to load university data");
@@ -84,7 +80,7 @@ export function SelectionPage() {
         try {
           const response = await fetch(
             `${API_BASE_URL}/get-subjects/?branch=${formData.branch}&semester=${formData.semester}`,
-            { method: "GET", credentials: "include" }
+            { method: "GET" }
           );
           if (!response.ok) throw new Error("Network response was not ok");
           const data = await response.json();
@@ -100,7 +96,7 @@ export function SelectionPage() {
     fetchSubjects();
   }, [formData.branch, formData.semester]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!user) {
       toast.error("Please login to continue");
