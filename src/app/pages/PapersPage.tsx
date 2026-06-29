@@ -10,6 +10,7 @@ import { Button } from "../components/ui/button";
 import { GlassCard } from "../components/GlassCard";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
+import { buildRgpvPaperUrl } from "../lib/rgpvUrl";
 
 // INTERFACE CRITICAL FIX: Add download_url variable coming from backend
 interface Paper {
@@ -73,10 +74,16 @@ export function PapersPage() {
     fetchPapers();
   }, [selectionData, navigate]);
 
-  // SAFE DOWNLOAD SYSTEM: Agat backend download_url nahi bhejta toh automatic standard fallback framework link banayega
-  const getSecureDownloadUrl = (paper: Paper) => {
-    if (paper.download_url) return paper.download_url;
-    return `https://narendrapatidarbtai-btech-backend.hf.space/api/admin/download-paper/${paper.id}/`;
+  // RGPV Online dynamic URL (matches www.rgpvonline.com/be/{slug}.html pattern)
+  const getRgpvPaperUrl = (paper: Paper) => {
+    return buildRgpvPaperUrl(paper, {
+      course: "be",
+      subjectName: selectionData.subjectName as string | undefined,
+    });
+  };
+
+  const openPaper = (paper: Paper) => {
+    window.open(getRgpvPaperUrl(paper), "_blank", "noopener,noreferrer");
   };
 
   const togglePaperSelection = (paperId: number) => {
@@ -202,8 +209,8 @@ export function PapersPage() {
                 <h3 className={`text-2xl font-black uppercase italic tracking-tight leading-[1.1] mb-12 min-h-[5rem] ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{paper.display_name}</h3>
                 <div className="flex gap-4">
                   {/* CRITICAL BUTTON FIXES: Uses getSecureDownloadUrl to bypass Hugging Face temporary disk issues */}
-                  <Button variant="secondary" className="flex-1 h-12 rounded-xl text-[10px] font-black uppercase" onClick={(e) => { e.stopPropagation(); window.open(getSecureDownloadUrl(paper), "_blank"); }}>View</Button>
-                  <Button variant="secondary" className="flex-1 h-12 rounded-xl text-[10px] font-black uppercase" onClick={(e) => { e.stopPropagation(); window.open(getSecureDownloadUrl(paper), "_blank"); }}>Download</Button>
+                  <Button variant="secondary" className="flex-1 h-12 rounded-xl text-[10px] font-black uppercase" onClick={(e) => { e.stopPropagation(); openPaper(paper); }}>View</Button>
+                  <Button variant="secondary" className="flex-1 h-12 rounded-xl text-[10px] font-black uppercase" onClick={(e) => { e.stopPropagation(); openPaper(paper); }}>Download</Button>
                 </div>
               </GlassCard>
             </motion.div>
