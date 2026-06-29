@@ -1,18 +1,58 @@
-import React from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Home, Activity, User } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Home, Activity, User, LogOut, ShieldCheck } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 
 export function MobileBottomNav() {
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const { isAuthenticated, logout, user } = useAuth();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
-  const profilePath = isAuthenticated ? "/selection" : "/auth";
+  const displayData = useMemo(() => {
+    const localUser = JSON.parse(localStorage.getItem("user") || "{}");
+    const currentUser = user || localUser;
+
+    const fullName = currentUser?.full_name || currentUser?.name || currentUser?.displayName || "Neural User";
+    const email = currentUser?.email || "active.session@pattern.tech";
+
+    return { fullName, email };
+  }, [user]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    setProfileOpen(false);
+  }, [location.pathname]);
+
+  const handleProfileClick = () => {
+    if (!isAuthenticated) {
+      navigate("/auth");
+      return;
+    }
+    setProfileOpen((open) => !open);
+  };
+
+  const handleLogout = () => {
+    logout();
+    setProfileOpen(false);
+    navigate("/");
+  };
 
   return (
     <nav
@@ -57,15 +97,56 @@ export function MobileBottomNav() {
         </Link>
 
         {/* Profile — right */}
-        <Link
-          to={profilePath}
-          className={`flex flex-col items-center justify-center gap-0.5 min-w-[3rem] transition-colors ${
-            isActive(profilePath) ? "text-indigo-400" : "text-gray-500 hover:text-white"
-          }`}
-        >
-          <User className="w-5 h-5" strokeWidth={isActive(profilePath) ? 2.5 : 2} />
-          <span className="text-[9px] font-bold uppercase tracking-wider">Profile</span>
-        </Link>
+        <div ref={profileRef} className="relative min-w-[3rem]">
+          <button
+            type="button"
+            onClick={handleProfileClick}
+            className={`flex flex-col items-center justify-center gap-0.5 w-full transition-colors ${
+              profileOpen ? "text-indigo-400" : "text-gray-500 hover:text-white"
+            }`}
+            aria-expanded={profileOpen}
+            aria-haspopup="true"
+          >
+            <User className="w-5 h-5" strokeWidth={profileOpen ? 2.5 : 2} />
+            <span className="text-[9px] font-bold uppercase tracking-wider">Profile</span>
+          </button>
+
+          <AnimatePresence>
+            {profileOpen && isAuthenticated && (
+              <motion.div
+                initial={{ opacity: 0, y: 12, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="absolute bottom-full right-0 mb-3 w-72 rounded-2xl bg-[#05050f]/95 border border-white/10 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-3xl"
+              >
+                <div className="px-4 py-4 border-b border-white/5 mb-3 bg-white/[0.02] rounded-xl">
+                  <div className="flex items-center gap-2 mb-3">
+                    <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <p className="text-[9px] uppercase tracking-[0.3em] font-black text-emerald-500">
+                      Authorized Node
+                    </p>
+                  </div>
+                  <p className="text-base font-black italic text-white leading-tight truncate uppercase tracking-tighter">
+                    {displayData.fullName}
+                  </p>
+                  <p className="text-[10px] text-gray-500 truncate mt-1.5 font-medium">
+                    {displayData.email}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center gap-2 p-3 rounded-xl text-red-500 hover:bg-red-500/10 transition-all font-black text-[10px] uppercase tracking-widest"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </nav>
   );

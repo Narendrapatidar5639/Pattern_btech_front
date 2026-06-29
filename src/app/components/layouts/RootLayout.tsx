@@ -1,7 +1,8 @@
-import { Outlet, ScrollRestoration } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { Navbar } from "../Navbar";
 import { Footer } from "../Footer";
 import { MobileBottomNav } from "../MobileBottomNav";
+import { ScrollToTop } from "../ScrollToTop";
 import { Toaster } from "../ui/sonner";
 import { AuthProvider } from "../../contexts/AuthContext";
 import { ThemeProvider } from "../../contexts/ThemeProvider";
@@ -19,6 +20,7 @@ export function RootLayout() {
           </div>
 
           <div className="relative z-10">
+            <ScrollToTop />
             <Navbar />
             <main className="pt-16 min-h-[calc(100vh-4rem)] pb-20 md:pb-0">
               <Outlet />
